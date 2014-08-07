@@ -71,11 +71,13 @@ IV. What is new in this version?
     
     - For an example of this, see apps_sfdl/fast_ram_test.c
 
-  (2) an implementation of TinyRAM
-      
-    - For details, see https://github.com/pepper-project/tinyram
-    - git submodule update --init will check this out into the
-      tinyram/ subdir, at which point you can consult tinyram/doc
+  (2) a C-to-C compiler for transforming data dependent loops into finite
+  state machines amenable to efficient compilation. Automatically invoked
+  when the source text uses the "buffet::fsm" C++11-style attribute.
+
+  NOTE that you will need to build a local copy of LLVM and Clang with
+  patches enabling this new attribute. See compiler/buffetfsm/README.md
+  for instructions on how to do this.
 
 V. Contact
 Please contact
