@@ -9,7 +9,7 @@ GENERATE_STATES="--gen-states 1"
 SHARED_BSTORE_PATH="default_shared_db"
 
 echo "LOG: Building executables"
-make clean; make SFDL_FILES="" C_FILES="$SRC_FILE" BUILD_CMT=0 BUILD_MIP=0
+make SFDL_FILES="" C_FILES="$SRC_FILE" BUILD_CMT=0 BUILD_MIP=0
 make SFDL_FILES="" C_FILES="$SRC_FILE" BUILD_CMT=0 BUILD_MIP=0
 
 echo "LOG: Running $SRC_FILE"

@@ -158,6 +158,9 @@ endif
 ifneq ($(BUILD_CMT), 0)
 include cmtgkr/Makefrag
 endif
+ifneq ($(BUILD_MIP), 0)
+    include mip/Makefrag
+endif
 include apps_sfdl/Makefrag
 
 APPS_TAILORED_BINS = $(patsubst apps_tailored/%.cpp, $(BINDIR)/%, $(EXEC_SRCFILES))
@@ -279,6 +282,7 @@ clean: clean-gensrc
 	rm -f ../compiler/backend/tmptime
 	rm -f ../compiler/tmptime
 	cd ../compiler/frontend; make clean; 
+	cd ../compiler/buffetfsm; make clean;
 
 clean-gensrc: 
 	rm -rf $(GENSRCDIR)

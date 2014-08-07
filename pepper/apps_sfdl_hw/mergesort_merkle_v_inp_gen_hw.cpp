@@ -33,4 +33,9 @@ void mergesort_merkleVerifierInpGenHw::create_input(mpq_t* input_q, int num_inpu
         mpq_canonicalize(input_q[i]);
         i++;
   }
+
+  srand(time(NULL));
+  for( ; i < num_inputs; i++) {
+      mpq_set_ui(input_q[i], rand() % 1024, 1);
+  }
 }

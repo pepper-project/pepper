@@ -28,6 +28,7 @@ I. Installation
  18. KyotoCabinet
  19. libzm (from https://github.com/herumi/ate-pairing.git)
  20. Java (1.7 or higher)
+ 21. LLVM/Clang. (See compiler/buffetfsm/README.md for build information.)
 
 II. Configuration
 
@@ -77,5 +78,8 @@ IV. What is new in this version?
       tinyram/ subdir, at which point you can consult tinyram/doc
 
 V. Contact
-Please contact srinath at cs dot utexas dot edu for any questions and
-comments.
+Please contact
+    srinath at cs dot utexas dot edu
+or
+    rsw at cs dot nyu dot edu
+for any questions and comments.

@@ -151,6 +151,34 @@ if [ "$extension" == "c" ]; then
     exit 1 
   } fi
 
+  if grep -q 'buffet::fsm' "$filename"; then
+  {
+      # make sure the FSM transformer is built
+      if [ "$build" != "--no-build" ]; then
+      {
+          cd buffetfsm
+          make -j$(nproc)
+
+          if [ $? != 0 ]; then
+          {
+              echo "Failed to build FSM transformer. Please make sure you have compiled LLVM."
+              exit 1
+          } fi
+
+          cd ..
+      } fi
+ 
+      fsmpath=buffetfsm/buffetfsm
+      echo "Found buffet::fsm directive. Flattening loops in input file."
+      mv "$filename" "$filename"prefsm.c
+      ${fsmpath} "$filename"prefsm.c | gcc -nostdinc -undef -E -P -o "$filename" -
+      if [ $? != 0 ]; then
+      {
+          echo "Error in FSM transformation! Giving up."
+          exit 1
+      } fi
+  } fi
+
   # Collect the define statements so that we can autogenerate the .cons.h
   # header for exogenous checking.
   grep "#define" "$path" > "$defsfile"

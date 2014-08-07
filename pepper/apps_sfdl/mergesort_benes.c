@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#define MAX_SIZE 256
+#define MAX_SIZE 128
 
 #define innerLoop(src,dst)                                                                      \
             for (i=lPtr; i<ePtr; i++) {                                                         \

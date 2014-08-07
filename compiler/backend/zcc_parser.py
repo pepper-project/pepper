@@ -2461,25 +2461,42 @@ def generate_create_input():
   //gmp_printf("Creating inputs\\n");
   """
 
-  for k in sorted(input_vars.named_vars.keys()):
+  allvars = []
+  current = None
+  for k in sorted(input_vars.named_vars.keys(), key=lambda x: input_vars.named_vars[x]["index"]):
     ivar = input_vars.named_vars[k];
     i = ivar["index"]
-    if (ivar["type"] == "int"):
-      code += """
-    v->get_random_signedint_vec(1, input_q + %d, %d);
-    """ % (i, ivar["na"])
+    t = ivar["type"]
+    a = ivar["na"]
+    b = ivar.get("nb")
 
-    elif (ivar["type"] == "uint"):
-      code += """
-    v->get_random_vec_priv(1, input_q + %d, %d);
-    """ % (i, ivar["na"])
-
-    elif (ivar["type"] == "float"):
-      code += """
-    v->get_random_rational_vec(1, input_q + %d, %d, %d);
-    """ % (i, ivar["na"], ivar["nb"])
-
+    if current is None:
+        current = (i, i, t, a, b)
     else:
-      raise Exception("Untyped input variable %s" % (ivar["name"]))
+        (cs, ce, ct, ca, cb) = current
+        if ce + 1 == i and ct == t and ca == a and cb == b:
+            current = (cs, i, ct, ca, cb)
+        else:
+            allvars.append(current)
+            current = (i, i, t, a, b)
+  if current is not None:
+      allvars.append(current)
+
+  for (s, e, t, a, b) in allvars:
+    tcode = ""
+    if t == "int":
+        tcode = "v->get_random_signedint_vec(1, input_q + i, %d);" % a
+    elif t == "uint":
+        tcode = "v->get_random_vec_priv(1, input_q + i, %d);" % a
+    elif t == "float":
+        tcode = "v->get_random_rational_vec(1, input_q + i, %d, %d);" % (a, b)
+    else:
+      raise Exception("Untyped input variable %s" % t)
+
+    code += """
+    for(int i=%d; i <= %d; i++) {
+        %s
+    }
+"""  % (s, e, tcode)
 
   return code

@@ -41,7 +41,7 @@ using std::endl;
 #define PINOCCHIO 3
 #define PINOCCHIO_ZK 4
 
-#define PROTOCOL ZAATAR
+#define PROTOCOL PINOCCHIO_ZK
 
 #if PROTOCOL == GINGER
   #define NONINTERACTIVE 0
