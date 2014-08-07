@@ -1,0 +1,14 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += $(SUPERDIR)/apps
+
+CMTGKR_APPS := $(wildcard $(SUPERDIR)/apps/*_cmtgkr.cpp)
+STANDALONE_APPS := $(SUPERDIR)/apps/pws_stat.cpp
+
+STANDALONE_APPS := $(wildcard $(STANDALONE_APPS))
+

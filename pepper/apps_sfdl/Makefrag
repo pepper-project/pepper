@@ -1,0 +1,55 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+SRCDIR := apps_sfdl
+OBJDIRS += $(GENSRCDIR)
+OBJDIRS += $(HWSRCDIR)
+
+# Add computations here. Must name verifier <computation>_v and prover
+# <computation>_p, and, optionally, <computation>_proof.
+SFDL_FILES := \
+
+C_FILES := \
+
+# Remove any .sfdl or .c files which do not exist
+SFDL_FILES := $(patsubst %, $(SRCDIR)/%.sfdl, $(SFDL_FILES))
+SFDL_FILES := $(wildcard $(SFDL_FILES))
+C_FILES := $(patsubst %, $(SRCDIR)/%.c, $(C_FILES))
+C_FILES := $(wildcard $(C_FILES))
+
+COMPUTATIONS = \
+  $(patsubst $(SRCDIR)/%.sfdl, %, $(SFDL_FILES)) \
+  $(patsubst $(SRCDIR)/%.c, %, $(C_FILES))
+
+# Set build targets to compile the required cpp files (excluding main file)
+APPS_SFDL_OBJFILES = \
+	$(patsubst %, $(OBJDIR)/$(GENSRCDIR)/%_v.o, $(COMPUTATIONS)) \
+	$(patsubst %, $(OBJDIR)/$(GENSRCDIR)/%_p.o, $(COMPUTATIONS)) \
+	$(patsubst %, $(OBJDIR)/$(GENSRCDIR)/%_cons.o, $(COMPUTATIONS)) \
+	$(patsubst %, $(OBJDIR)/$(GENSRCDIR)/%_v_inp_gen.o, $(COMPUTATIONS)) \
+	$(patsubst %, $(OBJDIR)/apps_sfdl_hw/%_p_exo.o, $(COMPUTATIONS)) \
+	$(patsubst %, $(OBJDIR)/apps_sfdl_hw/%_v_inp_gen_hw.o, $(COMPUTATIONS)) \
+
+# These intermediate files are marked as PRECIOUS, so that they are not
+# deleted after make is run.
+GENSRCFILES = \
+	$(patsubst %, $(GENSRCDIR)/%.cpp, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_v.cpp, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_v.h, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_p.cpp, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_p.h, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_v_inp_gen.cpp, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_v_inp_gen.h, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_cons.cpp, $(COMPUTATIONS)) \
+	$(patsubst %, $(GENSRCDIR)/%_cons.h, $(COMPUTATIONS)) \
+	$(patsubst %, apps_sfdl_hw/%_p_exo.h, $(COMPUTATIONS)) \
+	$(patsubst %, apps_sfdl_hw/%_p_exo.cpp, $(COMPUTATIONS)) \
+	$(patsubst %, apps_sfdl_hw/%_v_inp_gen_hw.h, $(COMPUTATIONS)) \
+	$(patsubst %, apps_sfdl_hw/%_v_inp_gen_hw.cpp, $(COMPUTATIONS)) \
+
+# Main files for each computation
+EXEC_SFDL_SRCFILES = $(patsubst %, $(GENSRCDIR)/%.cpp, $(COMPUTATIONS))

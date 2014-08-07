@@ -1,0 +1,19 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += crypto 
+SRCDIR = . 
+
+ifeq ($(USE_GPU), 1)
+# Only build files if they exist.
+CRYPTO_SRCFILES := $(wildcard crypto/*.cpp)
+else
+# Build the part of crypto that doesn't use the gpu
+CRYPTO_SRCFILES :=	crypto/crypto.cpp crypto/prng.cpp
+endif
+
+CRYPTO_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CRYPTO_SRCFILES))

@@ -1,0 +1,115 @@
+# This file lists the flags which are passed to the C++ code
+
+#Uncomment if this system does not have cuda / nvcc installed
+USE_GPU = 0 
+
+#An option to constrain the maximum number of provers
+NUM_PROVERS_MAX := 60
+
+#Determines how buggy the prover is. Set nonzero to test cases where the
+# prover deliberately skips computing parts of its proof vector
+BUGGINESS = 0
+
+#Determines which framework to output to, when compiling from sfdl -> cpp
+FRAMEWORK = ZAATAR
+
+#Comment out to turn off metrics output during compilation
+BENCHMARK_COMPILER := 1
+
+#Commented out => use dynamic prover execution (avoids long GCC compile times)
+#STATIC_COMPILED_PROVER := 1
+
+#A good default value
+COMPILER_WINDOW_SIZE = 10240
+
+#Uncomment to compile using the "naive fairplay" implementation
+#NAIVE_FAIRPLAY := 1
+
+#Comment out to skip the elimination of common subexpressions (Performing ECS uses lots of memory)
+#ELIMINATE_COMMON_SUBEXPRS := 1
+
+#Hash function to use in database
+DB_HASH_FUNC = ggh
+
+#FLAGS FOR hashgetdb AND hashputdb: 
+ifeq ($(DB_HASH_FUNC),null)
+  DB_HASH_NUM_BITS = 256
+else
+#  DB_HASH_NUM_BITS = 768
+   DB_HASH_NUM_BITS = 1216
+endif
+
+#FLAGS FOR getdb AND putdb:
+#Number of addresses in RAM (this should be a power of 2 for Merkle-tree
+#based RAM)
+DB_NUM_ADDRESSES = 1024 
+
+# Threshold number of cells in RAM below which we want to use the naive solution to RAM
+# The number below is calculated empirically for 32-bit cells in RAM and
+# with current parameters of Ajtai's hash function
+DB_THR_NUM_ADDRESSES_NAIVE = 32768
+
+# Number of bits in a RAM cell (Note: if DB_NUM_ADDRESSES <
+# DB_THR_NUM_ADDRESSES_NAIVE, this should be smaller than 32)
+RAM_CELL_NUM_BITS = 32
+
+FAST_RAM_ADDRESS_WIDTH = 32
+FAST_RAM_WORD_WIDTH = 64
+
+#If uncommented, arithmetic (+, *) will truncate as specified in the ANSI C standard
+#Commented by default, because these truncations add unecessary cost
+#ARITHMETIC_TRUNCATE_CSTANDARD = 1
+
+# Comment out to disable debug symbols
+COMPILE_DEV := 1
+
+ifeq ($(ON_TACC), 1)
+SCRATCH_FOLDER = $(SCRATCH)
+endif
+
+ZCC_CARGS :=
+ifdef BENCHMARK_COMPILER
+ZCC_CARGS += --metrics
+endif
+
+ifdef NAIVE_FAIRPLAY 
+ZCC_CARGS += --no-inline
+endif
+
+ifdef SKIP_CIRCUIT_OPT 
+ZCC_CARGS += --no-opt
+endif
+
+ifdef STATIC_COMPILED_PROVER 
+ZCC_CARGS += --staticp
+endif
+
+ifdef ELIMINATE_COMMON_SUBEXPRS 
+ZCC_CARGS += --ecs
+endif
+
+ifdef LIMIT_CONSTRAINT_COMPLEXITY
+ZCC_CARGS += --limcsize
+endif
+
+ifdef ARITHMETIC_TRUNCATE_CSTANDARD
+ZCC_CARGS += --cstdarithtruncate
+endif
+
+#ifdef ENABLE_CQL
+ZCC_CARGS += --cql
+#endif
+
+ZCC_CARGS += -b $(BUGGINESS) 
+ZCC_CARGS += -w $(COMPILER_WINDOW_SIZE) 
+ZCC_CARGS += -t $(FRAMEWORK) 
+
+# DB flags
+ZCC_CARGS += -db-hash-func $(DB_HASH_FUNC)
+ZCC_CARGS += -db-num-addresses $(DB_NUM_ADDRESSES)
+ZCC_CARGS += -ram-cell-num-bits $(RAM_CELL_NUM_BITS)
+ZCC_CARGS += -db-hash-num-bits $(DB_HASH_NUM_BITS)
+ZCC_CARGS += -db-thr-num-addresses-naive $(DB_THR_NUM_ADDRESSES_NAIVE)
+ZCC_CARGS += -fast-ram-address-width $(FAST_RAM_ADDRESS_WIDTH)
+ZCC_CARGS += -fast-ram-word-width $(FAST_RAM_WORD_WIDTH)
+

@@ -1,0 +1,83 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+THISDIR := cmtgkr
+OBJDIRS += $(THISDIR)
+
+CMTGKR_APPSRC := 		\
+	circuit.cpp		\
+	circuit_layer.cpp	\
+	cmtgkr_env.cpp		\
+	wiremle_*.cpp
+
+CMTGKR_APPSRC    := $(addprefix $(THISDIR)/,$(CMTGKR_APPSRC))
+STANDALONE_APPS := 
+
+SUPERDIR := $(THISDIR)
+include cmtgkr/base/Makefrag
+include cmtgkr/circuit/Makefrag
+include cmtgkr/unmodified/Makefrag
+include cmtgkr/apps/Makefrag
+
+THISDIR := cmtgkr
+
+CMTGKR_APPSRC := $(wildcard $(CMTGKR_APPSRC))
+CMTGKR_APPOBJFILES := $(addprefix $(OBJDIR)/,$(CMTGKR_APPSRC:cpp=o))
+
+STANDALONE_BINS := $(addprefix $(BINDIR)/,$(STANDALONE_APPS:.cpp=))
+CMTGKR_APP_BINS := $(addprefix $(BINDIR)/,$(CMTGKR_APPS:.cpp=))
+
+CMTGKR_TESTS := *_test.cpp
+CMTGKR_TESTS := $(wildcard $(addprefix $(THISDIR)/,$(CMTGKR_TESTS)))
+CMTGKR_TEST_BINS := $(addprefix $(BINDIR)/,$(CMTGKR_TESTS:.cpp=))
+
+CMTGKR_BINS := $(CMTGKR_APP_BINS) $(STANDALONE_BINS)
+
+CMTGKR_APPOBJFILES += $(OBJDIR)/net/libpeppernet.a	\
+		      $(OBJDIR)/net/libpepperstorage.a	\
+
+$(STANDALONE_BINS) : $(BINDIR)/$(THISDIR)/% :			\
+			$(OBJDIR)/$(THISDIR)/%.o 		\
+			$(OBJDIR)/crypto/prng.o 		\
+			$(COMMON_OBJFILES) 			\
+			$(CMTGKR_APPOBJFILES)
+	@echo + mk $@
+	@mkdir -p $(@D)
+	$(V)$(CPP) $(CFLAGS) $(IFLAGS) $(TACC_IFLAGS) -o $@ $^ $(LDFLAGS) $(TACC_LDFLAGS)
+
+$(CMTGKR_APP_BINS) : $(BINDIR)/$(THISDIR)/%_cmtgkr : 		\
+		 	$(OBJDIR)/$(THISDIR)/%_cmtgkr.o		\
+    			$(OBJDIR)/$(THISDIR)/%_circuit.o 	\
+			$(OBJDIR)/crypto/prng.o 		\
+			$(COMMON_OBJFILES) 			\
+			$(CMTGKR_APPOBJFILES)
+	@echo + mk $@
+	@mkdir -p $(@D)
+	$(V)$(CPP) $(CFLAGS) $(IFLAGS) $(TACC_IFLAGS) -o $@ $^ $(LDFLAGS) $(TACC_LDFLAGS)
+
+$(CMTGKR_TEST_BINS) : $(BINDIR)/$(THISDIR)/%_test :	\
+    			$(OBJDIR)/$(THISDIR)/%_test.o	\
+			$(OBJDIR)/crypto/prng.o  	\
+			$(COMMON_OBJFILES) 		\
+			$(CMTGKR_APPOBJFILES)
+	@echo + mk $@
+	@mkdir -p $(@D)
+	$(V)$(CPP) $(CFLAGS) $(IFLAGS) $(TACC_IFLAGS) -o $@ $^ $(LDFLAGS) $(TACC_LDFLAGS)
+
+cmttest-%: $(BINDIR)/$(THISDIR)/%_test
+	@echo + test $<
+	$(V)./$< $(CMDL_ARGS)
+
+cmttest-mpinet: $(BINDIR)/$(THISDIR)/mpinet_test
+	@echo + test $<
+	$(V)mpirun -np 2 $<
+
+all-cmt: $(CMTGKR_BINS)
+all: all-cmt
+
+test-cmt: $(patsubst $(BINDIR)/$(THISDIR)/%_test,cmttest-%,$(CMTGKR_TEST_BINS))
+

@@ -1,0 +1,24 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+SRCDIR = misc
+OBJDIRS += $(SRCDIR)
+
+MISC_APPS = \
+  micro2 \
+  shuffler \
+  storage \
+  input_creator \
+  dist_input_creator \
+
+ifeq ($(BUILD_MYSQL_MICRO), 1)
+MISC_APPS = $(MISC_APPS) mysql_client
+endif
+
+MISC_SRCFILES = $(addprefix $(SRCDIR), $(MISC_APPS))
+MISC_SRCFILES = $(patsubst %, $(SRCDIR)/%.cpp, $(MISC_APPS))
+MISC_SRCFILES := $(wildcard $(MISC_SRCFILES))

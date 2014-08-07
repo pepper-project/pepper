@@ -1,0 +1,3 @@
+[submodule "tinyram"]
+	path = tinyram
+	url = https://github.com/pepper-project/tinyram

@@ -1,0 +1,20 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += net
+
+NET_SRCFILES := *.cpp
+NET_SRCFILES := $(addprefix net/,$(NET_SRCFILES))
+
+# Only build files if they exist.
+NET_SRCFILES := $(wildcard $(NET_SRCFILES))
+NET_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(NET_SRCFILES))
+
+$(OBJDIR)/net/libpeppernet.a : $(NET_OBJFILES)
+	@echo + ar $@
+	$(V)$(AR) $@ $^
+

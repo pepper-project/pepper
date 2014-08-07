@@ -1,0 +1,106 @@
++ cpp cmtgkr/circuit/pws_circuit.cpp
++ mk bin/cmtgkr/pws_circuit_test
++ test bin/cmtgkr/pws_circuit_test
+==== Constructing Circuit ====
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I0
+[ParseTerm] begin
+[ParseTerm] token: I0
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I1
+[ParseTerm] begin
+[ParseTerm] token: I1
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+=== CONTANTS ===
+05 || 0
+02 || 1
+04 || -1
+06 || 2
+
+=== INPUTS ===
+00 || I0
+01 || I1
+
+=== VARIABLES ===
+00 || V0
+01 || V1
+03 || M2
+07 || M3
+08 || M4
+09 || M5
+10 || M6
+08 || O7
+[0] CON || 00 || 00 | 00 || V0
+[0] CON || 01 || 00 | 00 || V1
+[0] CON || 02 || 00 | 00 || 1
+[0] CON || 03 || 00 | 00 || M2
+[0] CON || 04 || 00 | 00 || -1
+[0] CON || 05 || 00 | 00 || 0
+[0] CON || 06 || 00 | 00 || 2
+[0] CON || 07 || 00 | 00 || M3
+[0] CON || 08 || 00 | 00 || O7
+[0] CON || 09 || 00 | 00 || M5
+[0] CON || 10 || 00 | 00 || M6
+
+[1] MUL || 00 || 03 | 04
+[1] ADD || 01 || 02 | 05 || 1
+[1] ADD || 02 || 03 | 05 || M2
+[1] ADD || 03 || 05 | 05 || 0
+[1] MUL || 04 || 07 | 04
+[1] ADD || 05 || 06 | 05 || 2
+[1] ADD || 06 || 07 | 05 || M3
+[1] MUL || 07 || 08 | 04
+[1] ADD || 08 || 08 | 05 || M4
+[1] MUL || 09 || 09 | 04
+[1] ADD || 10 || 09 | 05 || M5
+[1] MUL || 11 || 10 | 04
+[1] ADD || 12 || 10 | 05 || M6
+[1] ADD || 13 || 08 | 09
+[1] ADD || 14 || 10 | 04
+[1] ADD || 15 || 03 | 07
+[1] MUL || 16 || 01 | 04
+[1] ADD || 17 || 00 | 05 || V0
+[1] MUL || 18 || 00 | 04
+[1] ADD || 19 || 01 | 05 || V1
+
+[2] ADD || 00 || 01 | 00
+[2] ADD || 01 || 02 | 03 || M2
+[2] ADD || 02 || 05 | 04
+[2] ADD || 03 || 06 | 03 || M3
+[2] ADD || 04 || 01 | 07
+[2] ADD || 05 || 08 | 03 || M4
+[2] ADD || 06 || 01 | 09
+[2] ADD || 07 || 10 | 03 || M5
+[2] ADD || 08 || 01 | 11
+[2] ADD || 09 || 12 | 03 || M6
+[2] ADD || 10 || 13 | 14
+[2] ADD || 11 || 17 | 16
+[2] ADD || 12 || 19 | 18
+[2] ADD || 13 || 15 | 03
+[2] ADD || 14 || 03 | 03 || 0
+[2] ADD || 15 || 15 | 03
+
+[3] MUL || 00 || 01 | 00
+[3] MUL || 01 || 03 | 02
+[3] MUL || 02 || 05 | 04
+[3] MUL || 03 || 07 | 06
+[3] MUL || 04 || 09 | 08
+[3] ADD || 05 || 13 | 11
+[3] ADD || 06 || 05 | 14 || M4
+[3] ADD || 07 || 15 | 12
+[3] ADD || 08 || 09 | 14 || M6
+[3] MUL || 09 || 07 | 11
+
+[4] MUL || 00 || 06 | 05
+[4] MUL || 01 || 08 | 07
+
+==== Construction Complete ====

@@ -1,0 +1,65 @@
++ cpp cmtgkr/circuit/pws_circuit.cpp
++ mk bin/cmtgkr/pws_circuit_test
++ test bin/cmtgkr/pws_circuit_test
+==== Constructing Circuit ====
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I0
+[ParseTerm] begin
+[ParseTerm] token: I0
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I1
+[ParseTerm] begin
+[ParseTerm] token: I1
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+=== CONSTANTS ===
+04 || 0
+03 || -1
+
+=== INPUTS ===
+00 || I0
+01 || I1
+
+=== VARIABLES ===
+00 || V0
+01 || V1
+02 || M2
+00 || O3
+
+[0] CON || 00 || 00 | 00 || V0
+[0] CON || 01 || 00 | 00 || V1
+[0] CON || 02 || 00 | 00 || M2
+[0] CON || 03 || 00 | 00 || -1
+[0] CON || 04 || 00 | 00 || 0
+
+[1] MUL || 00 || 01 | 03 || -V1
+[1] ADD || 01 || 00 | 04 || V0
+[1] MUL || 02 || 00 | 03 || -V0
+[1] ADD || 03 || 01 | 04 || V1
+[1] ADD || 04 || 02 | 04 || M2
+[1] ADD || 05 || 04 | 04 || 0
+
+[2] ADD || 00 || 01 | 00 || V0 - V1
+[2] ADD || 01 || 03 | 02 || V1 - V0
+[2] ADD || 02 || 04 | 05 || M2
+[2] ADD || 03 || 05 | 05 || 0
+
+[3] MUL || 00 || 02 | 00 || O3 -- M2 * (V0 - V1)
+[3] ADD || 01 || 01 | 03 || V1 - V0
+[3] ADD || 02 || 00 | 03 || V0 - V1
+[3] ADD || 03 || 03 | 03 || 0
+
+[4] MUL || 00 || 00 | 01 || (V1 - V0) * O3
+[4] ADD || 01 || 02 | 03 || V0 - V1
+
+[5] ADD || 00 || 00 | 01 || (V0 - V1) - (V0 - V1) * O3 == (1 - O3) * (V0 - V1)
+
+==== Construction Complete ====

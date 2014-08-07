@@ -1,0 +1,37 @@
+Version 2.3 (078fb0725bbfc91134781382de203a916117faf6), August 6 2014
+  + Move TinyRAM implementation to an independent git project
+  + create submodule reference to TinyRAM impl
+
+Version 2.2 (77ac7ebd0e86c9027112ead934e22916f79a4367), July 25 2014
+  + This commit fixes a bug found by the authors of TrueSet (Proceedings
+  of Usenix Security 2014) whom we thank: Ahmed E. Kosba, Dimitrios
+  Papadopoulos, Charalampos Papamanthou, Mahmoud F. Sayed, Elaine Shi,
+  and Nikos Triandopoulos.
+
+  Changes:
+    + Use the naive switch-case solution to implement RAM operations
+    when that solution is cheaper than Merkle-tree based solution
+
+    + Add two new APIs: ramget_hybrid() and ramput_hybrid() that
+    automatically switch between the naive solution and the Merkle tree
+    based solution using a flag in pepper/flags, DB_THR_NUM_ADDRESSES_NAIVE 
+
+    + Add examples to exercise the new API: apps_sfdl/ram_hybrid_micro.c
+    and apps_sfdl/ram_merkle_micro.c
+
+Version 2.1 (4d25efdba47c1160b6c39a273f29c22652953bf1), June 05 2014
+  + Minor updates to TinyRAM's code
+  + A bug fix in zcc_parser.py
+  + A few updates to examples
+
+Version 2.0 (505877562e7d0dea9e13ae0bd4515ac26aff0760), April 25 2014
+  + Improve the concrete efficiency of RAM operations in Pantry by
+  adapting ideas from TinyRAM's memory checking circuit 
+  
+  + A complete reimplementation of TinyRAM, along with enhancements
+
+Version 1.1 (bf1b7c8e8775833fe5c8326d40d1b8c189d5da0e), November 11 2013
+  + Minor changes to the build system to use better defaults
+
+Version 1.0 (1d2ab516d2a97839237c6c36997df2667dbf88ee), October 24 2013
+  + Initial code release

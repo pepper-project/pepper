@@ -1,0 +1,26 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+THISDIR := $(SUPERDIR)/unmodified
+OBJDIRS += $(THISDIR)
+
+# Making default GMT-GKR apps (the CMT version).
+$(BINDIR)/sequentialGKR : $(THISDIR)/sequentialGKR.cc
+	@echo + mk $@
+	@mkdir -p $(@D)
+	$(V)$(CPP) -o $@ $< -O3
+
+$(BINDIR)/parallelGKR : $(THISDIR)/parallelGKR.cu
+	@echo + mk $@
+	@mkdir -p $(@D)
+	$(V)$(NVCC) -o $@ $< -arch=sm_20
+
+ifeq ($(USE_GPU), 1) 
+all: $(BINDIR)/sequentialGKR $(BINDIR)/parallelGKR
+else
+all: $(BINDIR)/sequentialGKR
+endif

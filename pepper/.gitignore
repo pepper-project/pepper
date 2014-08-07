@@ -1,0 +1,13 @@
+temp_block_store_*
+.project
+.cproject
+*.orig
+bin/*
+obj/*
+apps_sfdl_gen/*
+computation_state/*
+cmt_gkr_dat/*
+*.swo
+.cproject
+.project
+.settings/

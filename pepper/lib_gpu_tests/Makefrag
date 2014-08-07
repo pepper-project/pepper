@@ -1,0 +1,35 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += lib_gpu_tests
+TESTS := $(patsubst lib_gpu_tests/%.cpp, %, $(wildcard lib_gpu_tests/*_test.cpp))
+TESTBINS := $(addprefix $(BINDIR)/lib_gpu_tests/, $(TESTS))
+TESTS := $(TESTS:_test=)
+
+$(TESTBINS): $(OBJDIR)/lib_gpu_tests/test_utils.o $(OBJDIR)/lib_gpu_tests/common.o
+
+$(BINDIR)/lib_gpu_tests/vecadd_test: $(EXAMPLES_OBJFILES)
+$(BINDIR)/lib_gpu_tests/dot_product_test: $(EXAMPLES_OBJFILES)
+$(BINDIR)/lib_gpu_tests/rsa_test: $(EXAMPLES_OBJFILES)
+$(BINDIR)/lib_gpu_tests/modexp_test: $(EXAMPLES_OBJFILES) $(COMMON_OBJFILES)
+$(BINDIR)/lib_gpu_tests/mpz_utils_test: $(EXAMPLES_OBJFILES)
+$(BINDIR)/lib_gpu_tests/crypto_test: $(EXAMPLES_OBJFILES)
+$(BINDIR)/lib_gpu_tests/enc_dotp_test: $(EXAMPLES_OBJFILES)
+$(BINDIR)/lib_gpu_tests/gpu_micro_test: $(EXAMPLES_OBJFILES) \
+             $(COMMON_OBJFILES)
+$(BINDIR)/lib_gpu_tests/crypto_test: $(EXAMPLES_OBJFILES) 	\
+    				 $(CRYPTO_OBJFILES)		\
+				     $(COMMON_OBJFILES)
+$(BINDIR)/lib_gpu_tests/powm_cache_test: 	\
+    $(COMMON_OBJFILES) $(OBJDIR)/crypto/powm_cache.o
+
+# For running tests.
+buildtests: $(TESTBINS)
+test      : buildtests $(addprefix runtest-, $(TESTS))
+runtest-% : $(BINDIR)/lib_gpu_tests/%_test
+	@echo "======== Running `basename $*`... ========"
+	@$< -m MP

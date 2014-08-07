@@ -1,0 +1,14 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += $(SUPERDIR)/circuit
+
+CMTGKR_BASE_APPSRC := *.cpp
+CMTGKR_BASE_APPSRC := $(addprefix $(SUPERDIR)/circuit/,$(CMTGKR_BASE_APPSRC))
+
+CMTGKR_APPSRC += $(CMTGKR_BASE_APPSRC)
+

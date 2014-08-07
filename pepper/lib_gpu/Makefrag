@@ -1,0 +1,12 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += lib_gpu 
+
+EXAMPLES_OBJFILES = mpz_utils.o vecadd.o dot_product.o bn_kn.o mp_modexp_gpu.o mp_modexp_gputest.o rsa_cuda.o cuda_mem_pool.o device_context.o mp_modexp.o mp_modexp_cpu.o pinned_mem_pool.o rsa_context.o rsa_context_mp.o
+
+EXAMPLES_OBJFILES := $(addprefix $(OBJDIR)/lib_gpu/, $(EXAMPLES_OBJFILES))

@@ -1,0 +1,239 @@
++ test bin/cmtgkr/pws_circuit_test
+==== Constructing Circuit ====
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I0
+[ParseTerm] begin
+[ParseTerm] token: I0
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I1
+[ParseTerm] begin
+[ParseTerm] token: I1
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I2
+[ParseTerm] begin
+[ParseTerm] token: I2
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I3
+[ParseTerm] begin
+[ParseTerm] token: I3
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I4
+[ParseTerm] begin
+[ParseTerm] token: I4
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I5
+[ParseTerm] begin
+[ParseTerm] token: I5
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I6
+[ParseTerm] begin
+[ParseTerm] token: I6
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: I7
+[ParseTerm] begin
+[ParseTerm] token: I7
+[ParseTerm] token: E
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: V0
+[ParseTerm] begin
+[ParseTerm] token: V0
+[ParseTerm] token: *
+[ParseTerm] token: -
+[ParseTerm] token: (
+[ParsePoly] begin END: )
+[ParsePoly] TOKEN: V4
+[ParseTerm] begin
+[ParseTerm] token: V4
+[ParseTerm] token: +
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: +
+[ParsePoly] NEW TERM
+[ParsePoly] TOKEN: V1
+[ParseTerm] begin
+[ParseTerm] token: V1
+[ParseTerm] token: )
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: )
+[ParsePoly] TOKEN == END
+[ParseTerm] token: *
+[ParseTerm] token: V6
+[ParseTerm] token: E
+[ParseTerm] end
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: V0
+[ParseTerm] begin
+[ParseTerm] token: V0
+[ParseTerm] token: *
+[ParseTerm] token: V5
+[ParseTerm] token: +
+[ParseTerm] end
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: +
+[ParsePoly] NEW TERM
+[ParsePoly] TOKEN: V1
+[ParseTerm] begin
+[ParseTerm] token: V1
+[ParseTerm] token: *
+[ParseTerm] token: V7
+[ParseTerm] token: E
+[ParseTerm] end
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: V2
+[ParseTerm] begin
+[ParseTerm] token: V2
+[ParseTerm] token: *
+[ParseTerm] token: V4
+[ParseTerm] token: +
+[ParseTerm] end
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: +
+[ParsePoly] NEW TERM
+[ParsePoly] TOKEN: V3
+[ParseTerm] begin
+[ParseTerm] token: V3
+[ParseTerm] token: *
+[ParseTerm] token: V6
+[ParseTerm] token: E
+[ParseTerm] end
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+[ParsePoly] begin END: E
+[ParsePoly] TOKEN: V2
+[ParseTerm] begin
+[ParseTerm] token: V2
+[ParseTerm] token: *
+[ParseTerm] token: V5
+[ParseTerm] token: +
+[ParseTerm] end
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: +
+[ParsePoly] NEW TERM
+[ParsePoly] TOKEN: V3
+[ParseTerm] begin
+[ParseTerm] token: V3
+[ParseTerm] token: *
+[ParseTerm] token: V7
+[ParseTerm] token: E
+[ParseTerm] end
+[ParseTerm] end
+TERM END
+[ParsePoly] TOKEN: E
+[ParsePoly] TOKEN == END
+=== CONTANTS ===
+09 || 0
+08 || -1
+
+=== INPUTS ===
+00 || I0
+01 || I1
+02 || I2
+03 || I3
+04 || I4
+05 || I5
+06 || I6
+07 || I7
+
+=== VARIABLES ===
+00 || V0
+01 || V1
+02 || V2
+03 || V3
+04 || V4
+05 || V5
+06 || V6
+07 || V7
+00 || O8
+04 || O9
+05 || O10
+06 || O11
+[0] 2 || 00 || 00 | 00
+[0] 2 || 01 || 00 | 00
+[0] 2 || 02 || 00 | 00
+[0] 2 || 03 || 00 | 00
+[0] 2 || 04 || 00 | 00
+[0] 2 || 05 || 00 | 00
+[0] 2 || 06 || 00 | 00
+[0] 2 || 07 || 00 | 00
+[0] 2 || 08 || 00 | 00
+[0] 2 || 09 || 00 | 00
+
+[1] 0 || 00 || 04 | 01
+[1] 0 || 01 || 08 | 09
+[1] 0 || 02 || 00 | 09
+[1] 0 || 03 || 09 | 09
+[1] 0 || 04 || 06 | 09
+[1] 1 || 05 || 00 | 05
+[1] 1 || 06 || 01 | 07
+[1] 1 || 07 || 02 | 04
+[1] 1 || 08 || 03 | 06
+[1] 1 || 09 || 02 | 05
+[1] 1 || 10 || 03 | 07
+
+[2] 1 || 00 || 00 | 01
+[2] 0 || 01 || 02 | 03
+[2] 0 || 02 || 04 | 03
+[2] 0 || 03 || 03 | 03
+[2] 0 || 04 || 05 | 06
+[2] 0 || 05 || 07 | 08
+[2] 0 || 06 || 09 | 10
+
+[3] 0 || 00 || 01 | 03
+[3] 1 || 01 || 00 | 02
+
+[4] 1 || 00 || 00 | 01
+
+==== Construction Complete ====

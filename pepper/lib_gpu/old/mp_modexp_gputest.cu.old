@@ -1,0 +1,801 @@
+#include <cassert>
+#include <iostream>
+
+#include <sys/time.h>
+
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+
+#include "mp_modexp.h"
+
+#define MAX_THREAD_GROUPS_PER_BLOCK 2
+
+static __device__ __forceinline__ int get_block_elem_idx(int num_limbs)
+{
+  return (threadIdx.y * blockDim.x + threadIdx.x) >> (__ffs(num_limbs) - 1); 
+  //return threadIdx.y;
+}
+
+/**
+ * Returns the limb index of an particular thread. This is the index of the
+ * limb this thread is responsible for in the mp number.
+ * Assumes that num_limbs is a power of 2 that is less than the warp size (32)
+ * and that the grid is one dimentional.
+ */
+static __device__ __forceinline__ int get_limb_idx(int num_limbs)
+{
+    return threadIdx.x & (num_limbs - 1);
+}
+
+/**
+ * Returns the element index of an particular thread. This is the index of the
+ * element that this thread is responsible for in a vector.
+ * Assumes that num_limbs is a power of 2 that is less than the warp size (32)
+ * and that the grid is one dimentional.
+ */
+static __device__ __forceinline__ int get_elem_idx(int num_limbs)
+{
+  return ((blockIdx.x * blockDim.y + threadIdx.y) * blockDim.x + threadIdx.x) >> (__ffs(num_limbs) - 1);
+  //return (blockIdx.x * blockDim.x) >> (__ffs(num_limbs) - 1) + threadIdx.y;
+}
+
+static __device__ WORD mp_umul_hi(WORD a, WORD b)
+{
+#if MP_USE_64BIT
+	return __umul64hi(a, b);
+#else
+	return __umulhi(a, b);
+#endif
+}
+
+static __device__ WORD mp_umul_lo(WORD a, WORD b)
+{
+	return a * b;
+}
+
+static __device__ void mp_mul_dev(volatile WORD *ret, 
+		volatile const WORD *a, volatile const WORD *b, int S)
+{
+	volatile __shared__ WORD s_t[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S * 2];	// in case that ret == a or ret == b
+	volatile __shared__ WORD s_c[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S * 2];	// carry
+  
+  const int block_elem_idx = get_block_elem_idx(S);
+  volatile WORD *t = &s_t[block_elem_idx * S * 2];
+  volatile WORD *c = &s_c[block_elem_idx * S * 2];
+
+
+	const int idx = threadIdx.x;
+
+	c[idx] = 0;
+	c[idx + S] = 0;
+	t[idx] = 0;
+	t[idx + S] = 0;
+
+	for (int i = 0; i < S; i++) {
+		WORD hi = mp_umul_hi(a[i], b[idx]);
+		WORD lo = mp_umul_lo(a[i], b[idx]);
+
+		ADD_CARRY(c[i + idx + 2], t[i + idx + 1], t[i + idx + 1], hi);
+		ADD_CARRY(c[i + idx + 1], t[i + idx], t[i + idx], lo);
+	}
+
+	while (__any(c[idx] != 0 || c[idx + S] != 0)) {
+		ADD_CARRY_CLEAR(c[idx + S + 1], t[idx + S], t[idx + S], c[idx + S]);
+		ADD_CARRY_CLEAR(c[idx + 1], t[idx], t[idx], c[idx]);
+	}
+
+	ret[idx] = t[idx];
+	ret[idx + S] = t[idx + S];
+}
+
+/* returns 1 for the most significant carry. 0 otherwise */
+static __device__ int mp_add_dev(volatile WORD *ret, 
+		volatile const WORD *x, volatile const WORD *y, int S)
+{
+	volatile __shared__ WORD s_c[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];	// carry. c[i] is set by a[i] and b[i]
+  const int block_elem_idx = get_block_elem_idx(S);
+  volatile WORD *c = &s_c[block_elem_idx * S];
+
+	const int idx = threadIdx.x;
+
+	c[idx] = 0;
+	ADD_CARRY(c[idx], ret[idx], x[idx], y[idx]);
+
+	if (idx < S - 1) {
+		while (__any(c[idx] != 0))
+			ADD_CARRY_CLEAR(c[idx + 1], ret[idx + 1], 
+					ret[idx + 1], c[idx]);
+	}
+
+	return c[S - 1];
+}
+
+/* returns 1 for the most significant carry (very unlikely). 0 otherwise */
+static __device__ int mp_add1_dev(volatile WORD *ret, 
+		volatile const WORD *x, int S)
+{
+	volatile __shared__ WORD s_c[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];	// carry. c[i] is set by a[i] and b[i]
+  const int block_elem_idx = get_block_elem_idx(S);
+  volatile WORD *c = &s_c[block_elem_idx * S];
+
+	const int idx = threadIdx.x;
+
+	c[idx] = 0;
+	ADD_CARRY(c[idx], ret[idx], x[idx], (idx == 0) ? 1 : 0);
+
+	if (idx < S - 1) {
+		while (__any(c[idx] != 0))
+			ADD_CARRY_CLEAR(c[idx + 1], ret[idx + 1], 
+					ret[idx + 1], c[idx]);
+	}
+
+	return c[S - 1];
+}
+
+/* returns 1 for the most significant borrow. 0 otherwise */
+static __device__ int mp_sub_dev(volatile WORD *ret, 
+		volatile const WORD *x, volatile const WORD *y, int S)
+{
+	volatile __shared__ WORD s_b[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S]; // borrow
+  const int block_elem_idx = get_block_elem_idx(S);
+  volatile WORD *b = &s_b[block_elem_idx * S];
+
+	const int idx = threadIdx.x;
+
+	b[idx] = 0;
+	SUB_BORROW(b[idx], ret[idx], x[idx], y[idx]);
+
+	if (idx < S - 1) {
+		while (__any(b[idx] != 0))
+			SUB_BORROW_CLEAR(b[idx + 1], ret[idx + 1], 
+					ret[idx + 1], b[idx]);
+	}
+
+	return b[S - 1];
+}
+
+#if !MONTMUL_FAST_GPU
+
+/* assumes a and b are 'montgomeritized' */
+static __device__ void mp_montmul_dev(WORD *ret, const WORD *a, const WORD *b, 
+		const WORD *n, const WORD *np, int S)
+{
+	volatile __shared__ WORD s_t[MAX_S * 2];
+	volatile __shared__ WORD s_m[MAX_S * 2];
+	volatile __shared__ WORD s_mn[MAX_S * 2];
+	__shared__ WORD s_u[MAX_S];
+	
+  const int block_elem_idx = get_block_elem_idx(S);
+  volatile WORD *t = &s_t[S * 2 * block_elem_idx];
+	volatile WORD *m = &s_m[S * 2 * block_elem_idx];
+	volatile WORD *mn = &s_mn[S * 2 * block_elem_idx];
+	WORD *u = &s_u[S * block_elem_idx];
+	
+  const int idx = get_limb_idx(S);
+	
+	int c = 0;
+
+	mp_mul_dev(t, a, b, S);
+	mp_mul_dev(m, t, np, S);
+	mp_mul_dev(mn, m, n, S);
+	c = mp_add_dev(u, t + S, mn + S, S);
+
+	if (__any(t[idx] != 0))
+		c |= mp_add1_dev(u, u, S);
+
+	// c may be 0 or 1, but not 2
+	if (c)	
+		goto u_is_bigger;
+
+#if 0 && __CUDA_ARCH__ >= 200
+        const uint32_t shift = (S * (block_elem_idx & 1));
+        const uint32_t mask = (0xFFFFFFFF >> (32 - S));
+        uint32_t less = (__ballot(t[idx + S] < n[idx]) >> shift) & mask;
+        uint32_t more = (__ballot(t[idx + S] > n[idx]) >> shift) & mask;
+
+#if 0
+        uint32_t bless = __ballot(t[idx + S] < n[idx]);
+        uint32_t bmore = __ballot(t[idx + S] > n[idx]);
+
+        bool easy;
+	/* Ugly, but practical. 
+	 * Can we do this much better with Fermi's ballot()? */
+	for (int i = S - 1; i >= 0; i--) {
+		if (t[i + S] > n[i]) {
+                  easy = true;
+                  break;
+                }
+		if (t[i + S] < n[i]) {
+                  easy = false;
+                  break;
+                }
+	}
+
+        //if (idx == 0) printf("less: %08o| more: %08o| res: %x| easy: %x\n", less, more, less < more, easy);
+        //if (idx == 0) printf("less: %d| more: %08x\n", shift, mask);
+
+        if (idx == 0 && (easy != (less < more))) {
+          printf("t: ");
+          for (int i = 0; i < S; i++)
+            printf("%08x |", t[i + S]);
+          printf("\n");
+          printf("n: ");
+          for (int i = 0; i < S; i++)
+            printf("%08x |", n[i]);
+          printf("\n");
+          printf("bless: %04x| bmore: %04x\n", bless >> shift, bmore >> shift);
+          printf("mless: %04x| mmore: %04x\n", mask, mask);
+          printf("shift: %d| shiftn: %d\n", shift, (32 >> (__ffs(S) - 1)));
+          printf("less: %08o| more: %08o| res: %x| easy: %x\n", less, more, less < more, easy);
+        }
+#endif
+
+        if (less < more) {
+          mp_sub_dev<S>(ret, t + S, n);
+          return;
+        } else {
+          ret[idx] = t[idx + S];
+          return;
+        }
+#else
+	/* Ugly, but practical. 
+	 * Can we do this much better with Fermi's ballot()? */
+	for (int i = S - 1; i >= 0; i--) {
+		if (u[i] > n[i])
+			goto u_is_bigger;
+		if (u[i] < n[i])
+			goto n_is_bigger;
+	}
+#endif
+
+u_is_bigger:
+	mp_sub_dev(ret, u, n, S);
+	return;
+
+n_is_bigger:
+	ret[idx] = u[idx];
+	return;
+}
+
+#else 
+
+/* fast version */
+static __device__ void mp_montmul_dev(WORD *ret, const WORD *a, const WORD *b, 
+		const WORD *n, const WORD *np, int S)
+{
+	volatile __shared__ WORD s_t[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S * 2];
+	volatile __shared__ WORD s_c[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S * 2];
+
+	const int idx = get_limb_idx(S);
+  const int block_elem_idx = get_block_elem_idx(S);
+  
+  volatile WORD *t = &s_t[block_elem_idx * S * 2];
+  volatile WORD *c = &s_c[block_elem_idx * S * 2];
+
+	c[idx] = 0;
+	c[idx + S] = 0;
+
+	/* step 1: calculate t = ab */
+	mp_mul_dev(t, a, b, S);
+
+	/* step 2: calculate t + mn */
+	for (int j = 0; j < S; j++) {
+		WORD m = mp_umul_lo(t[j], np[0]);
+		WORD hi = mp_umul_hi(m, n[idx]);
+		WORD lo = mp_umul_lo(m, n[idx]);
+
+		ADD_CARRY(c[idx + j + 1], t[idx + j + 1], t[idx + j + 1], hi);
+		ADD_CARRY(c[idx + j], t[idx + j], t[idx + j], lo);
+
+		ADD_CARRY_CLEAR(c[idx + 1], t[idx + 1], t[idx + 1], c[idx]);
+	}
+
+	/* here all t[0] ~ t[MAX_S - 1] should be zero */
+
+	while (__any(c[idx + S - 1] != 0))
+		ADD_CARRY_CLEAR(c[idx + S], t[idx + S], t[idx + S], c[idx + S - 1]);
+
+	/* step 3: return t or t - n */
+
+	// c may be 0 or 1, but not 2
+	if (c[S * 2 - 1])	
+		goto u_is_bigger;
+
+	/* Ugly, but practical. 
+	 * Can we do this much better with Fermi's ballot()? */
+	for (int i = S - 1; i >= 0; i--) {
+		if (t[i + S] > n[i])
+			goto u_is_bigger;
+		if (t[i + S] < n[i])
+			goto n_is_bigger;
+	}
+
+u_is_bigger:
+	mp_sub_dev(ret, t + S, n, S);
+	return;
+
+n_is_bigger:
+	ret[idx] = t[idx + S];
+	return;
+}
+
+#endif
+
+static __device__ WORD ar_pow[MP_SW_MAX_FRAGMENT / 2][MAX_NUM_THREADS];
+
+/**
+ * assumes ar is 'montgomeritized'
+ * assumes sw represents an exponent != 0
+ */
+static __device__ void mp_modexp_dev(WORD *ret, const WORD *ar, const struct mp_sw *sw, 
+		const WORD *n, const WORD *np, int S)
+{
+	const int limb_idx = get_limb_idx(S);
+  const int vec_limb_idx = get_elem_idx(S) * S + limb_idx;
+  const int block_elem_idx = get_block_elem_idx(S);
+
+	__shared__ WORD s_tmp[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+  WORD *tmp = &s_tmp[block_elem_idx * S];
+
+
+	ar_pow[0][vec_limb_idx] = ar[limb_idx];
+	mp_montmul_dev(ret, ar, ar, n, np, S);
+
+	for (int i = 3; i <= sw->max_fragment; i += 2) {
+		tmp[limb_idx] = ar_pow[(i >> 1) - 1][vec_limb_idx];
+		mp_montmul_dev(tmp, tmp, ret, n, np, S);
+		ar_pow[i >> 1][vec_limb_idx] = tmp[limb_idx];
+	}
+
+        ret[limb_idx] = ar_pow[sw->fragment[sw->num_fragments - 1] >> 1][vec_limb_idx];
+
+	for (int i = sw->num_fragments - 2; i >= 0; i--) {
+		for (int k = 0; k < sw->length[i]; k++)
+			mp_montmul_dev(ret, ret, ret, n, np, S);
+
+		if (sw->fragment[i]) {
+			tmp[limb_idx] = ar_pow[sw->fragment[i] >> 1][vec_limb_idx];
+			mp_montmul_dev(ret, ret, tmp, n, np, S);
+		}
+	}
+}
+
+static __global__ void mp_mul_kernel(int num_words, WORD *RET, WORD *X, WORD *Y)
+{
+	__shared__ WORD s_x[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+	__shared__ WORD s_y[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+	__shared__ WORD s_ret[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S * 2];
+	
+  const int block_elem_idx = get_block_elem_idx(num_words);
+  WORD *x = &s_x[block_elem_idx * num_words];
+  WORD *y = &s_y[block_elem_idx * num_words];
+  WORD *ret = &s_ret[block_elem_idx * num_words * 2];
+
+	const int idx = threadIdx.x;
+
+	x[idx] = X[idx];
+	y[idx] = Y[idx];
+
+	mp_mul_dev(ret, x, y, num_words);
+
+	RET[idx] = ret[idx];
+	RET[idx + num_words] = ret[idx + num_words];
+}
+
+static __global__ void mp_add_kernel(int num_words, WORD *RET, WORD *X, WORD *Y)
+{
+	__shared__ WORD s_x[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_y[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_ret[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+
+  const int block_elem_idx = get_block_elem_idx(num_words);
+  WORD *x = &s_x[block_elem_idx * num_words];
+  WORD *y = &s_y[block_elem_idx * num_words];
+  WORD *ret = &s_ret[block_elem_idx * num_words];
+
+	const int idx = threadIdx.x;
+
+	x[idx] = X[idx];
+	y[idx] = Y[idx];
+
+	mp_add_dev(ret, x, y, num_words);
+
+	RET[idx] = ret[idx];
+}
+
+static __global__ void mp_add1_kernel(int num_words, WORD *RET, WORD *X)
+{
+	__shared__ WORD s_x[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_ret[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+
+  const int block_elem_idx = get_block_elem_idx(num_words);
+  WORD *x = &s_x[block_elem_idx * num_words];
+  WORD *ret = &s_ret[block_elem_idx * num_words];
+
+	
+	const int idx = threadIdx.x;
+
+	x[idx] = X[idx];
+
+	mp_add1_dev(ret, x, num_words);
+
+	RET[idx] = ret[idx];
+}
+
+static __global__ void mp_sub_kernel(int num_words, WORD *RET, WORD *X, WORD *Y)
+{
+	__shared__ WORD s_x[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_y[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_ret[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+ 
+  const int block_elem_idx = get_block_elem_idx(num_words);
+  WORD *x = &s_x[block_elem_idx * num_words];
+  WORD *y = &s_y[block_elem_idx * num_words];
+  WORD *ret = &s_ret[block_elem_idx * num_words];
+
+	
+	const int idx = threadIdx.x;
+
+	x[idx] = X[idx];
+	y[idx] = Y[idx];
+
+	mp_sub_dev(ret, x, y, num_words);
+
+	RET[idx] = ret[idx];
+}
+
+static __global__ void mp_montmul_kernel(int num_words, WORD *RET, WORD *A, WORD *B, WORD *N, WORD *NP)
+{
+	__shared__ WORD s_a[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_b[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_n[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_np[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_ret[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+
+  const int block_elem_idx = get_block_elem_idx(num_words);
+  WORD *a = &s_a[block_elem_idx * num_words];
+  WORD *b = &s_b[block_elem_idx * num_words];
+  WORD *n = &s_n[block_elem_idx * num_words];
+  WORD *np = &s_np[block_elem_idx * num_words];
+  WORD *ret = &s_ret[block_elem_idx * num_words];
+
+
+	const int idx = threadIdx.x;
+
+	a[idx] = A[idx];
+	b[idx] = B[idx];
+	n[idx] = N[idx];
+	np[idx] = NP[idx];
+
+	mp_montmul_dev(ret, a, b, n, np, num_words);
+
+	RET[idx] = ret[idx];
+}
+
+static __global__ void mp_modexp_kernel(int num_words, WORD *RET, WORD *A, struct mp_sw *sw, WORD *N, WORD *NP)
+{
+	__shared__ WORD s_a[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_n[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_np[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+	__shared__ WORD s_ret[MAX_THREAD_GROUPS_PER_BLOCK * MAX_S];
+  
+  const int block_elem_idx = get_block_elem_idx(num_words);
+  WORD *a = &s_a[block_elem_idx * num_words];
+  WORD *n = &s_n[block_elem_idx * num_words];
+  WORD *np = &s_np[block_elem_idx * num_words];
+  WORD *ret = &s_ret[block_elem_idx * num_words];
+
+	
+	const int idx = threadIdx.x;
+
+	a[idx] = A[idx];
+	n[idx] = N[idx];
+	np[idx] = NP[idx];
+
+	mp_modexp_dev(ret, a, sw, n, np, num_words);
+
+	RET[idx] = ret[idx];
+}
+
+// Montgomerize input first.
+static __global__ void mp_modexp_mont_kernel(
+    int num_words, WORD *RET, const WORD *A, const struct mp_sw *sw,
+    const WORD *R_SQ, const WORD *N, const WORD *NP)
+{
+  __shared__ WORD s_a[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+  __shared__ WORD s_r_sq[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+  __shared__ WORD s_n[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+  __shared__ WORD s_np[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+  __shared__ WORD s_ret[MAX_THREAD_GROUPS_PER_BLOCK*MAX_S];
+	
+  const int limb_idx = get_limb_idx(num_words);
+  const int elem_idx = get_elem_idx(num_words);
+  const int block_elem_idx = get_block_elem_idx(num_words);
+
+  WORD *a = &s_a[block_elem_idx * num_words];
+  WORD *r_sq = &s_r_sq[block_elem_idx * num_words];
+  WORD *n = &s_n[block_elem_idx * num_words];
+  WORD *np = &s_np[block_elem_idx * num_words];
+  WORD *ret = &s_ret[block_elem_idx * num_words];
+
+
+  //if (!elem_idx && !limb_idx) printf("[%d] %p %x\n", blockIdx.x, a, a[limb_idx]);
+  // Account for the case when sw represents the exponent 0.
+  if (sw[elem_idx].num_fragments == 0) {
+    ret[limb_idx] = (limb_idx == 0);
+  } else {
+    a[limb_idx] = A[elem_idx * num_words + limb_idx];
+    r_sq[limb_idx] = R_SQ[limb_idx];
+    n[limb_idx] = N[limb_idx];
+    np[limb_idx] = NP[limb_idx];
+
+    mp_montmul_dev(a, a, r_sq, n, np, num_words);
+
+    mp_modexp_dev(ret, a, &sw[elem_idx], n, np, num_words);
+
+    r_sq[limb_idx] = (limb_idx == 0); // r_sq = 1;
+    mp_montmul_dev(ret, ret, r_sq, n, np, num_words);
+  }
+
+  RET[elem_idx * num_words + limb_idx] = ret[limb_idx];
+}
+
+void mp_mul_gpu(WORD *ret, const WORD *x, const WORD *y)
+{
+	WORD *x_d;
+	WORD *y_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&x_d, sizeof(WORD) * MAX_S));
+	checkCudaErrors(cudaMalloc(&y_d, sizeof(WORD) * MAX_S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * 2 * MAX_S));
+
+	checkCudaErrors(cudaMemcpy(x_d, x, sizeof(WORD) * MAX_S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(y_d, y, sizeof(WORD) * MAX_S, cudaMemcpyHostToDevice));
+
+	mp_mul_kernel<<<1, MAX_S>>>(MAX_S, ret_d, x_d, y_d);
+	assert(cudaGetLastError() == cudaSuccess);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * 2 * MAX_S, cudaMemcpyDeviceToHost));
+
+	checkCudaErrors(cudaFree(x_d));
+	checkCudaErrors(cudaFree(y_d));
+	checkCudaErrors(cudaFree(ret_d));
+}
+
+void mp_add_gpu(WORD *ret, const WORD *x, const WORD *y)
+{
+	WORD *x_d;
+	WORD *y_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&x_d, sizeof(WORD) * MAX_S));
+	checkCudaErrors(cudaMalloc(&y_d, sizeof(WORD) * MAX_S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * MAX_S));
+
+	checkCudaErrors(cudaMemcpy(x_d, x, sizeof(WORD) * MAX_S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(y_d, y, sizeof(WORD) * MAX_S, cudaMemcpyHostToDevice));
+  cudaGetLastError();
+	mp_add_kernel<<<1, MAX_S>>>(MAX_S, ret_d, x_d, y_d);
+	assert(cudaGetLastError() == cudaSuccess);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * MAX_S, cudaMemcpyDeviceToHost));
+
+	checkCudaErrors(cudaFree(x_d));
+	checkCudaErrors(cudaFree(y_d));
+	checkCudaErrors(cudaFree(ret_d));
+}
+
+void mp_add1_gpu(WORD *ret, const WORD *x)
+{
+	WORD *x_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&x_d, sizeof(WORD) * MAX_S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * MAX_S));
+
+	checkCudaErrors(cudaMemcpy(x_d, x, sizeof(WORD) * MAX_S, cudaMemcpyHostToDevice));
+
+	mp_add1_kernel<<<1, MAX_S>>>(MAX_S, ret_d, x_d);
+	assert(cudaGetLastError() == cudaSuccess);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * MAX_S, cudaMemcpyDeviceToHost));
+
+	checkCudaErrors(cudaFree(x_d));
+	checkCudaErrors(cudaFree(ret_d));
+}
+
+void mp_sub_gpu(WORD *ret, const WORD *x, const WORD *y)
+{
+	WORD *x_d;
+	WORD *y_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&x_d, sizeof(WORD) * MAX_S));
+	checkCudaErrors(cudaMalloc(&y_d, sizeof(WORD) * MAX_S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * MAX_S));
+
+	checkCudaErrors(cudaMemcpy(x_d, x, sizeof(WORD) * MAX_S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(y_d, y, sizeof(WORD) * MAX_S, cudaMemcpyHostToDevice));
+
+	mp_sub_kernel<<<1, MAX_S>>>(MAX_S, ret_d, x_d, y_d);
+	assert(cudaGetLastError() == cudaSuccess);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * MAX_S, cudaMemcpyDeviceToHost));
+
+	checkCudaErrors(cudaFree(x_d));
+	checkCudaErrors(cudaFree(y_d));
+	checkCudaErrors(cudaFree(ret_d));
+}
+
+void mp_montmul_gpu(WORD *ret, const WORD *a, const WORD *b, 
+		const WORD *n, const WORD *np, int S)
+{
+	WORD *a_d;
+	WORD *b_d;
+	WORD *n_d;
+	WORD *np_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&a_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&b_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&n_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&np_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * S));
+
+	checkCudaErrors(cudaMemcpy(a_d, a, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(b_d, b, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(n_d, n, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(np_d, np, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+
+	mp_montmul_kernel<<<1, S>>>(S, ret_d, a_d, b_d, n_d, np_d);
+	assert(cudaGetLastError() == cudaSuccess);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * S, cudaMemcpyDeviceToHost));
+
+	checkCudaErrors(cudaFree(a_d));
+	checkCudaErrors(cudaFree(b_d));
+	checkCudaErrors(cudaFree(n_d));
+	checkCudaErrors(cudaFree(np_d));
+	checkCudaErrors(cudaFree(ret_d));
+}
+
+void mp_modexp_gpu(WORD *ret, const WORD *ar, const WORD *e, 
+		const WORD *n, const WORD *np, int S)
+{
+	struct mp_sw sw;
+	struct mp_sw *sw_d;
+	mp_get_sw(&sw, e);
+
+	WORD *ar_d;
+	WORD *n_d;
+	WORD *np_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&sw_d, sizeof(sw)));
+	checkCudaErrors(cudaMalloc(&ar_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&n_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&np_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * S));
+
+	checkCudaErrors(cudaMemcpy(sw_d, &sw, sizeof(sw), cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(ar_d, ar, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(n_d, n, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(np_d, np, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+
+	mp_modexp_kernel<<<1, S>>>(S, ret_d, ar_d, sw_d, n_d, np_d);
+	assert(cudaGetLastError() == cudaSuccess);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * S, cudaMemcpyDeviceToHost));
+
+	checkCudaErrors(cudaFree(sw_d));
+	checkCudaErrors(cudaFree(ar_d));
+	checkCudaErrors(cudaFree(n_d));
+	checkCudaErrors(cudaFree(np_d));
+	checkCudaErrors(cudaFree(ret_d));
+}
+
+// Modexp that doesn't assume inputs are montgomerized
+void mp_modexp_mont_gpu(WORD *ret, const WORD *a, const WORD *e, 
+		const WORD *r_sq, const WORD *n, const WORD *np, int S)
+{
+	struct mp_sw sw;
+	struct mp_sw *sw_d;
+	mp_get_sw(&sw, e);
+
+	WORD *a_d;
+  WORD *r_sq_d;
+	WORD *n_d;
+	WORD *np_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&sw_d, sizeof(sw)));
+	checkCudaErrors(cudaMalloc(&a_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&r_sq_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&n_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&np_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * S));
+
+	checkCudaErrors(cudaMemcpy(sw_d, &sw, sizeof(sw), cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(a_d, a, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(r_sq_d, r_sq, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(n_d, n, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(np_d, np, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+
+	mp_modexp_mont_kernel<<<1, S>>>(S, ret_d, a_d, sw_d, r_sq_d, n_d, np_d);
+	assert(cudaGetLastError() == cudaSuccess);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * S, cudaMemcpyDeviceToHost));
+
+	checkCudaErrors(cudaFree(sw_d));
+	checkCudaErrors(cudaFree(a_d));
+	checkCudaErrors(cudaFree(r_sq_d));
+	checkCudaErrors(cudaFree(n_d));
+	checkCudaErrors(cudaFree(np_d));
+	checkCudaErrors(cudaFree(ret_d));
+}
+
+void mp_many_modexp_mont_gpu_nocopy(
+    int len_vector, WORD *ret, WORD *a, struct mp_sw *sw,
+    const WORD *r_sq, const WORD *n, const WORD *np, int S)
+{
+  if (len_vector % MAX_THREAD_GROUPS_PER_BLOCK == 0) {
+    //printf("calling more per thread group\n");
+    mp_modexp_mont_kernel<<<len_vector/MAX_THREAD_GROUPS_PER_BLOCK, dim3(S,MAX_THREAD_GROUPS_PER_BLOCK,1)>>>(S, ret, a, sw, r_sq, n, np);
+  } else {
+    mp_modexp_mont_kernel<<<len_vector, S>>>(S, ret, a, sw, r_sq, n, np);
+  }
+
+  //mp_modexp_mont_kernel<<<len_vector, dim3(S,1,1)>>>(S, ret, a, sw, r_sq, n, np);
+  assert(cudaGetLastError() == cudaSuccess);
+}
+
+// multiple modexps in parallel
+// TODO: 
+// (2) Invoke many modexps in a single block instead of one modexp per
+// block
+// (3) It is better to copy these "montogomery stuff" once and then use
+// it in every kernel invoked than copying with every invocation of this
+// function
+void mp_many_modexp_mont_gpu(int len_vector, WORD *ret, WORD *a,
+  WORD *e, const WORD *r_sq, const WORD *n, const WORD *np, int S, int
+  S_exp)
+{
+	struct mp_sw sw[len_vector];
+	struct mp_sw *sw_d;
+  
+  for (int i=0; i<len_vector; i++)
+	  mp_get_sw(&sw[i], &e[i*S_exp], S_exp);
+
+	WORD *a_d;
+  WORD *r_sq_d;
+	WORD *n_d;
+	WORD *np_d;
+	WORD *ret_d;
+
+	checkCudaErrors(cudaMalloc(&sw_d, sizeof(struct mp_sw) * len_vector));
+  checkCudaErrors(cudaMalloc(&a_d, sizeof(WORD) * S * len_vector));
+	checkCudaErrors(cudaMalloc(&r_sq_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&n_d, sizeof(WORD) * S)); 
+	checkCudaErrors(cudaMalloc(&np_d, sizeof(WORD) * S));
+	checkCudaErrors(cudaMalloc(&ret_d, sizeof(WORD) * S * len_vector));
+
+	checkCudaErrors(cudaMemcpy(sw_d, sw, sizeof(struct mp_sw) * len_vector, cudaMemcpyHostToDevice));
+ 
+  checkCudaErrors(cudaMemcpy(a_d, a, sizeof(WORD) * S * len_vector, cudaMemcpyHostToDevice));
+	
+  checkCudaErrors(cudaMemcpy(r_sq_d, r_sq, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(n_d, n, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(np_d, np, sizeof(WORD) * S, cudaMemcpyHostToDevice));
+
+  mp_many_modexp_mont_gpu_nocopy(len_vector, ret_d, a_d, sw_d, r_sq_d, n_d, np_d, S);
+
+	checkCudaErrors(cudaMemcpy(ret, ret_d, sizeof(WORD) * S * len_vector, cudaMemcpyDeviceToHost));
+  
+	checkCudaErrors(cudaFree(sw_d));
+	checkCudaErrors(cudaFree(a_d));
+	checkCudaErrors(cudaFree(r_sq_d));
+	checkCudaErrors(cudaFree(n_d));
+	checkCudaErrors(cudaFree(np_d));
+	checkCudaErrors(cudaFree(ret_d));
+}

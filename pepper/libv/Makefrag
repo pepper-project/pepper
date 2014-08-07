@@ -1,0 +1,32 @@
+#
+# Makefile fragment for common code.
+# This is NOT a complete makefile;
+# you must run GNU make in the top-level directory
+# where the GNUmakefile is located.
+#
+
+OBJDIRS += libv 
+SRCDIR = . 
+
+LIBV_SRCFILES := libv/libv.cpp
+PROVER_SRCFILES := \
+  libv/prover.cpp \
+  libv/computation_p.cpp \
+  libv/gcomputation_p.cpp \
+  libv/zcomputation_p.cpp \
+  libv/exogenous_checker.cpp
+
+VERIFIER_SRCFILES := \
+  libv/verifier.cpp \
+  libv/gcomputation_v.cpp \
+  libv/zcomputation_v.cpp \
+  libv/input_creator.cpp
+
+# Only build files if they exist.
+LIBV_SRCFILES := $(wildcard $(LIBV_SRCFILES))
+PROVER_SRCFILES := $(wildcard $(PROVER_SRCFILES))
+VERIFIER_SRCFILES := $(wildcard $(VERIFIER_SRCFILES))
+
+LIBV_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LIBV_SRCFILES))
+PROVER_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(PROVER_SRCFILES))
+VERIFIER_OBJFILES := $(patsubst %.cpp, $(OBJDIR)/%.o, $(VERIFIER_SRCFILES))
