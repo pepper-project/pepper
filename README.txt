@@ -66,7 +66,7 @@ III. Running examples
 
 IV. What is new in this version?
   
-  (1) a better implementation of RAM operations in Pantry by adapting
+  (1) a better implementation of RAM operations by adapting
   ideas from TinyRAM
     
     - For an example of this, see apps_sfdl/fast_ram_test.c
