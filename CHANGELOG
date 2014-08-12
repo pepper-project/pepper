@@ -1,6 +1,6 @@
-Version 1.0 (34ac677f875ec57e535f8cf3a1f5c30e72c10f3b), August 6 2013
+Version 1.0 (tag: V1.0), August 6 2013
   + Initial code release
 
-Version 1.1 (), August 12 2013
+Version 1.1 (tag: V1.1), August 12 2013
   + Compiler optimizes away stores of 0 to previously uninitialized
     RAM locations, since these locations by default have value 0.
