@@ -15,6 +15,7 @@ mergesort_merkleVerifierInpGenHw::mergesort_merkleVerifierInpGenHw(Venezia* v_)
 }
 
 //Refer to apps_sfdl_gen/mergesort_merkle_cons.h for constants to use when generating input.
+using mergesort_merkle_cons::MAX_SIZE;
 void mergesort_merkleVerifierInpGenHw::create_input(mpq_t* input_q, int num_inputs)
 {
   #if IS_REDUCER == 0
@@ -34,8 +35,13 @@ void mergesort_merkleVerifierInpGenHw::create_input(mpq_t* input_q, int num_inpu
         i++;
   }
 
+  int j;
   srand(time(NULL));
-  for( ; i < num_inputs; i++) {
-      mpq_set_ui(input_q[i], rand() % 1024, 1);
+  for(j = 0 ; j < MAX_SIZE; j++) {
+      mpq_set_ui(input_q[i+j], rand() % 1024, 1);
+  }
+
+  for(int k=i+j; k<num_inputs; k++) {
+      mpq_set_ui(input_q[k], 0, 1);
   }
 }

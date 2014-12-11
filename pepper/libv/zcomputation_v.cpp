@@ -1,4 +1,14 @@
 #include <libv/zcomputation_v.h>
+#include <common/memory.h> 
+
+#ifdef USE_LIBSNARK
+#include "r1cs/r1cs.hpp"
+#include "common/types.hpp"
+#include "r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+using namespace libsnark;
+#endif
+
+
 
 ZComputationVerifier::ZComputationVerifier(int batch, int reps, int ip_size,
     int out_size, int num_variables, int num_constraints, int optimize_answers,
@@ -18,7 +28,14 @@ ZComputationVerifier::ZComputationVerifier(int batch, int reps, int ip_size,
   size_f2_vec = chi + 1;
 
   num_verification_runs = NUM_VERIFICATION_RUNS;
+
+  //qap files loaded elsewhere for libsnark
+#ifndef USE_LIBSNARK
   init_qap(file_name_qap);
+#else
+  num_bits_in_prime = 256;
+#endif
+  qap_fn = file_name_qap;
   init_state();
 }
 
@@ -55,6 +72,8 @@ ZComputationVerifier::~ZComputationVerifier() {
   clear_vec_G1(size_input+size_output, g_Ai_io);
 #else
 
+
+
 #if PROTOCOL == PINOCCHIO_ZK
   clear_scalar_G1(g_a_D);
   clear_scalar_G1(g_b_D);
@@ -70,6 +89,7 @@ ZComputationVerifier::~ZComputationVerifier() {
 #endif
 
   // VK
+#ifndef USE_LIBSNARK
   clear_scalar_G1(g);
   clear_scalar_G2(h);
   clear_scalar_G2(h_alpha_a);
@@ -86,16 +106,22 @@ ZComputationVerifier::~ZComputationVerifier() {
   clear_scalar_G1(g_c_C0);
   clear_vec_G1(size_input+size_output, g_a_Ai_io);
   clear_scalar(r_c_D);
-  
+
+
+
   #if PUBLIC_VERIFIER == 0
   clear_vec(size_input+size_output, Ai_io);
   clear_scalar_G1(g_a_base);
   #endif
-
+#endif
 #endif
   // answers
+
+#ifndef USE_LIBSNARK
   clear_vec_G1(size_answer_G1, f_ni_answers_G1);
   clear_vec_G2(size_answer_G2, f_ni_answers_G2);
+#endif
+
 #else
   clear_scalar(A_tau);
   clear_scalar(B_tau);
@@ -204,11 +230,13 @@ void ZComputationVerifier::init_state() {
   output = &input[size_input];
   alloc_init_vec(&input_q, size_input);
 
+#ifndef USE_LIBSNARK
   alloc_init_vec(&set_v, size_f2_vec);
   v->compute_set_v(size_f2_vec, set_v, prime);
 
   // init pairing
   init_pairing_from_file(PAIRING_PARAM, prime);
+#endif
 
 #if GGPR == 1
   size_vk_G1 = 2 + size_input + size_output;
@@ -280,7 +308,7 @@ void ZComputationVerifier::init_state() {
   alloc_init_scalar_G1(g_b_beta_D);
   alloc_init_scalar_G1(g_c_beta_D);
 #endif
-
+#ifndef USE_LIBSNARK
   // initialize storage for VK
   alloc_init_scalar_G1(g);
   alloc_init_scalar_G2(h);
@@ -303,12 +331,14 @@ void ZComputationVerifier::init_state() {
   alloc_init_vec(&Ai_io, size_input+size_output);
   alloc_init_scalar_G1(g_a_base);
   #endif
-
 #endif
+#endif
+
+#ifndef USE_LIBSNARK
   // initialize storage for answers
   alloc_init_vec_G1(&f_ni_answers_G1, size_answer_G1);
   alloc_init_vec_G2(&f_ni_answers_G2, size_answer_G2);
-
+#endif
 #ifdef DEBUG_TEST_ENABLE
   // some test cases
   G1_t g, result1, result2;
@@ -669,8 +699,199 @@ G2_t h_beta;
 mpz_t t, D;
 #endif
 #endif
+#ifdef USE_LIBSNARK
+void ZComputationVerifier::generate_libsnark_keys()
+{
+  //start_profiling();
+  typedef Fr<bn128_pp> FieldT;
+  init_public_params<bn128_pp>();
+  r1cs_constraint_system<FieldT> q;
+
+  int cn_len = qap_fn.length()-8;
+  string comp_name = qap_fn.substr(4, cn_len);  
+
+  int numConstraints;
+  string filepath = "./bin/" + comp_name;
+  ifstream numCons(filepath+".number_of_constraints");
+
+  // cout << "num_constraints" << chi << endl;
+  numCons >> numConstraints;
+  cout << "NUMBER OF CONSTRAINTS (unrounded):  " << numConstraints << endl;
+
+  int Ai, Aj, Bi, Bj, Ci, Cj;
+
+  //libsnark does not support initializing field elements
+  //from large (> long ) negative integers,
+  //but it's easy enough to just add the prime modulus.
+ 
+  mpz_t  Acoef, Bcoef, Ccoef;
+  mpz_init(Acoef);
+  mpz_init(Bcoef);
+  mpz_init(Ccoef);
+  mpz_t p;
+  mpz_init_set_str(p, "21888242871839275222246405745257275088548364400416034343698204186575808495617", 10);
+
+  ifstream Amat(filepath + ".qap.matrix_a");
+  ifstream Bmat(filepath + ".qap.matrix_b");
+  ifstream Cmat(filepath + ".qap.matrix_c");
+
+  Amat >> Ai;
+  Amat >> Aj;
+  Amat >> Acoef;
+  if (mpz_sgn(Acoef) == -1)
+     mpz_add(Acoef, p, Acoef);
+
+    //    std::cout << Ai << " " << Aj << " " << Acoef << std::endl;
+
+  Bmat >> Bi;
+  Bmat >> Bj;
+  Bmat >> Bcoef;
+  if (mpz_sgn(Bcoef) == -1)
+     mpz_add(Bcoef, p, Bcoef);
+
+  Cmat >> Ci;
+  Cmat >> Cj;
+  Cmat >> Ccoef;
+  if (mpz_sgn(Ccoef) == -1)
+      mpz_mul_si(Ccoef, Ccoef, -1);
+  else if(mpz_sgn(Ccoef) == 1)
+      {
+	mpz_mul_si(Ccoef, Ccoef, -1);
+	mpz_add(Ccoef, p, Ccoef);
+      }
+   
+  int num_intermediate_vars, num_inputs, num_outputs, num_inputs_outputs;
+  num_intermediate_vars = size_f1_vec;
+  num_inputs = size_input;
+  num_outputs = size_output;
+  num_inputs_outputs = num_inputs + num_outputs;
+  q.num_inputs = num_inputs_outputs;
+  q.num_vars = num_intermediate_vars + num_inputs_outputs + 1;
+    
+  for (int currentconstraint = 1; currentconstraint <= numConstraints; currentconstraint++)
+  {
+        linear_combination<FieldT> A, B, C;
+
+        while(Aj == currentconstraint && Amat)
+        {
+	  //Zaatar's constraints assume that variables are ordered as 1-Z-X-Y.
+	  //In libsnark it is 1-X-Y-Z.
+	  //  std::cout << Ai << " " << Aj << " " << Acoef << std::endl;
+                if (Ai <= num_intermediate_vars && Ai != 0)
+                    Ai += num_inputs_outputs;
+                else if (Ai > num_intermediate_vars)
+                    Ai -= num_intermediate_vars;
+		
+		FieldT AcoefT(Acoef);
+                A.add_term(Ai, AcoefT);
+                if(!Amat)
+                    break;
+                Amat >> Ai;
+                Amat >> Aj;
+                Amat >> Acoef; 
+		if (mpz_sgn(Acoef) == -1)
+		    mpz_add(Acoef, p, Acoef);
+        }
+
+        while(Bj == currentconstraint && Bmat)
+        {
+                if (Bi <= num_intermediate_vars && Bi != 0)
+                    Bi += num_inputs_outputs;
+                else if (Bi > num_intermediate_vars)
+                    Bi -= num_intermediate_vars;
+		//         std::cout << Bi << " " << Bj << " " << Bcoef << std::endl;
+		FieldT BcoefT(Bcoef);
+                B.add_term(Bi, BcoefT);
+                if (!Bmat)
+                    break;
+                Bmat >> Bi;
+                Bmat >> Bj;
+                Bmat >> Bcoef;
+		if (mpz_sgn(Bcoef) == -1)
+		  mpz_add(Bcoef, p, Bcoef);
+        }
+
+        while(Cj == currentconstraint && Cmat)
+        {
+                if (Ci <= num_intermediate_vars && Ci != 0)
+                    Ci += num_inputs_outputs;
+                else if (Ci > num_intermediate_vars)
+                    Ci -= num_intermediate_vars;
+		//Libsnark constraints are A*B = C, vs. A*B - C = 0 for Zaatar.
+		//Which is why the C coefficient is negated. 
+               
+		// std::cout << Ci << " " << Cj << " " << Ccoef << std::endl;
+		FieldT CcoefT(Ccoef);
+                C.add_term(Ci, CcoefT);
+                if (!Cmat)
+                  break;
+                Cmat >> Ci;
+                Cmat >> Cj;
+                Cmat >> Ccoef;
+		if (mpz_sgn(Ccoef) == -1)
+		    mpz_mul_si(Ccoef, Ccoef, -1);
+		else if (mpz_sgn(Ccoef) == 1)
+		  {
+		    mpz_mul_si(Ccoef, Ccoef, -1);
+		    mpz_add(Ccoef, p, Ccoef);
+		  }
+		  
+        }
+
+        q.add_constraint(r1cs_constraint<FieldT>(A, B, C));
+        
+       // dump_constraint(r1cs_constraint<FieldT>(A, B, C), va, variable_annotations);
+    }
+
+    Amat.close();
+    Bmat.close();
+    Cmat.close();
+      
+    linear_combination<FieldT> A, B, C;
+
+    for (size_t i = 1; i < q.num_vars; ++i)
+    {
+        A.add_term(i, 1);
+        B.add_term(i, 1);
+    }
+
+    C.add_term(q.num_vars, 1);
+    q.add_constraint(r1cs_constraint<FieldT>(A, B, C));
+    //cout<< "size of q" << q.constraints.size()<< std::endl;
+    Measurement m_key;
+
+    m_key.begin_with_init();
+    r1cs_ppzksnark_keypair<bn128_pp> keypair = r1cs_ppzksnark_generator<bn128_pp>(q);
+    r1cs_ppzksnark_processed_verification_key<bn128_pp> pvk = r1cs_ppzksnark_verifier_process_vk<bn128_pp>(keypair.vk); 
+    m_key.end();
+
+    cout << "m_key_create " << m_key.get_papi_elapsed_time() << endl;
+
+    string filename = FOLDER_STATE;
+    filename += "/libsnark_vk";
+    ofstream vkey(filename);
+    filename = FOLDER_STATE;
+    filename += "/libsnark_pk";
+    ofstream pkey(filename);
+
+    m_key.begin_with_init();
+    vkey << pvk;
+    pkey << keypair.pk;
+    pkey.close(); vkey.close();
+    m_key.end();
+
+    cout << "m_key_write " << m_key.get_papi_elapsed_time() << endl;   
+    cout << "v_verification_key_size " << stat_size("/libsnark_vk", FOLDER_STATE)   << endl;
+    cout << "v_proving_key_size " << stat_size("/libsnark_pk", FOLDER_STATE)<< endl;
+
+    send_file((char*)"libsnark_pk");
+}
+
+#endif
 
 void ZComputationVerifier::create_noninteractive_query() {
+
+#ifndef USE_LIBSNARK
 #if GGPR == 1
   create_noninteractive_GGPR_query();
 #else
@@ -812,6 +1033,7 @@ void ZComputationVerifier::create_noninteractive_query() {
   clear_vec_G1(size_f1_beta_query, f1_beta_query);
 
 #if PROTOCOL == PINOCCHIO_ZK
+
   G1_exp(g_a_D, g_a, D);
   G1_exp(g_b_D, g_b, D);
   //alloc_init_scalar_G1(g_c_D);
@@ -823,8 +1045,10 @@ void ZComputationVerifier::create_noninteractive_query() {
   G1_exp(g_a_beta_D, g_a_beta, D);
   G1_exp(g_b_beta_D, g_b_beta, D);
   G1_exp(g_c_beta_D, g_c_beta, D);
-#endif
 
+  
+
+#endif //pinochio zk
   // create VK
   G2_exp(h_alpha_a, h, alpha_a);
   G2_exp(h_alpha_b, h, alpha_b);
@@ -949,7 +1173,18 @@ void ZComputationVerifier::create_noninteractive_query() {
   send_file((char *)"g_b_beta_D");
   send_file((char *)"g_c_beta_D");
 #endif
+#endif //ggpr = 1
+
+#endif //use libsnark
+  cout << "generating libsnark key" << endl; 
+#ifdef USE_LIBSNARK
+  cout << "v_current_mem_before_keygen " << getCurrentRSS() << endl;
+  cout << "v_peak_mem_before_keygen " << getPeakRSS() << endl;
+  generate_libsnark_keys();
+  cout << "v_current_mem_after_keygen " << getCurrentRSS() << endl;
+  cout << "v_peak_mem_after_keygen " << getPeakRSS() << endl;
 #endif
+
 }
 #endif
 

@@ -43,7 +43,14 @@ using std::endl;
 
 #define PROTOCOL PINOCCHIO_ZK
 
-#if PROTOCOL == GINGER
+//USE_LIBSNARK is set in the flags file. The protocol is then set to PINOCCHIO_ZK.
+#if defined(USE_LIBSNARK)
+  #define PROTOCOL PINOCCHIO_ZK
+  #define NONINTERACTIVE 1
+  #define GGPR 0
+  #define FAST_FOURIER_INTERPOLATION 0
+  #define PUBLIC_VERIFIER 0
+#elif PROTOCOL == GINGER
   #define NONINTERACTIVE 0
   #define FAST_FOURIER_INTERPOLATION 0
 #elif PROTOCOL == ZAATAR
@@ -64,6 +71,9 @@ using std::endl;
   #define FAST_FOURIER_INTERPOLATION 0
   #define PUBLIC_VERIFIER 0
 #endif
+
+
+
 
 extern "C" {
 #include "ecrypt-sync.h"
@@ -128,7 +138,7 @@ bool recursive_mkdir(const string& dir, mode_t mode = DEFAULT_DIRECTORY_PERMISSI
 bool open_file(FILE **fp, const char *vec_name, const char *permission,
   const char *folder_name);
 
-int stat_size(const char* filename, const char*folder_name = NULL);
+long long int stat_size(const char* filename, const char*folder_name = NULL);
 
 void open_file_update(fstream& fp, const char* name, const char* folder_name);
 

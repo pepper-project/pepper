@@ -4,10 +4,23 @@
 #include <libv/computation_p.h>
 #include <libv/zpcp.h>
 #include <common/utility.h>
+
+
+#ifdef USE_LIBSNARK
+#include "r1cs/r1cs.hpp"
+#include "common/types.hpp"
+#include "r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+#include "algebra/curves/public_params.hpp"
+#include "encoding/knowledge_commitment.hpp"
+#include "algebra/fields/fp.hpp"
+static Measurement m_queries, m_proofv;
+static void starttimers();
+#endif
+
+
 #if NONINTERACTIVE == 1
 #include <common/pairing_util.h>
 #endif
-
 static const unsigned char bit_reversal_table[] = {
   0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0, 
   0x08, 0x88, 0x48, 0xC8, 0x28, 0xA8, 0x68, 0xE8, 0x18, 0x98, 0x58, 0xD8, 0x38, 0xB8, 0x78, 0xF8, 
@@ -116,7 +129,6 @@ class ZComputationProver : public ComputationProver {
     virtual void interpret_constraints() = 0;
     void compute_assignment_vectors();
     void init_qap(const char*);
-
     void prover_computation_commitment();
     void prover_do_computation();
 #if NONINTERACTIVE == 1

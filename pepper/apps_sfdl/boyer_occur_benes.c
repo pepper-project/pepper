@@ -1,7 +1,7 @@
 #include <stdint.h>
 
-#define PATTERN_LENGTH 128
-#define ALPHABET_LENGTH 4032
+#define PATTERN_LENGTH 512
+#define ALPHABET_LENGTH 16128
 
 struct In { uint8_t input[PATTERN_LENGTH]; };
 struct Out { uint8_t output[ALPHABET_LENGTH]; };

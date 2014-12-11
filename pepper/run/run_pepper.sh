@@ -43,3 +43,6 @@ echo "LOG: Using shared store named $SHARED_BSTORE_PATH"
 mpirun -np 2 ./bin/$SRC_FILE -p 1 -b 1 -r 1 -i 10 -v 0 $GENERATE_STATES $SHARED_BSTORE_PATH_FLAG
 
 rm -rf temp_block_store*
+
+
+

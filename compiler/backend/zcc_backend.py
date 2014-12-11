@@ -71,6 +71,7 @@ class CodeGenerator():
     self.output_prefix = output_prefix
     self.class_name = class_name
     zcc_parser.class_name = class_name
+    zcc_parser.output_dir = output_dir
     self.framework = framework
     zcc_parser.framework = framework
     self.worksheetMode = worksheetMode

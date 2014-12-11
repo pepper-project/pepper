@@ -7,7 +7,7 @@ program pam_clustering {
   const k = 2; //Number of clusters
   const d = 128; //Dimensionality of datapoints
   const m = 20; //Number of datapoints
-  const L = 5; //Number of times to run the swap phase (Each iteration tests (m-1)*k configurations)
+  const L = 30; //Number of times to run the swap phase (Each iteration tests (m-1)*k configurations)
 
   //types
   type iterator = int; //The type of loop iterators is ignored

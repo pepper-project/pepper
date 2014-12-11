@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <db.h>
 
-#define NDEEP 16
-#define NELMS 16
+#define NDEEP 32
+#define NELMS 32
 
 struct In { uint32_t input[NELMS]; };
 struct Out { uint32_t value; };

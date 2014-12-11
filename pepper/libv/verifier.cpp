@@ -5,6 +5,11 @@
 #include <storage/exo.h>
 #include <common/utility.h>
 #include <common/pairing_util.h>
+#include <common/memory.h>
+
+#ifdef USE_LIBSNARK
+using namespace libsnark;
+#endif
 
 Verifier::Verifier(int batch, int reps, int ip_size, int opt_answers,
                    char *prover_url, const char *prover_name) {
@@ -55,6 +60,9 @@ void Verifier::init_state() {
   snprintf(scratch_str, BUFLEN - 1, "prime_f_%d.txt", num_bits_in_prime);
 #else
   snprintf(scratch_str, BUFLEN - 1, "prime_libzm_%d.txt", num_bits_in_prime);
+   #ifdef USE_LIBSNARK
+  snprintf(scratch_str, BUFLEN - 1, "prime_libsnark_%d.txt", num_bits_in_prime);
+    #endif
 #endif
 #else
   snprintf(scratch_str, BUFLEN - 1, "prime_%d.txt", num_bits_in_prime);
@@ -86,7 +94,7 @@ void Verifier::init_server_variables(char *prover_url,
 }
 
 void Verifier::send_file(char *file_name) {
-  int file_size = 0;
+  long long int file_size = 0;
   double time = 0;
   snprintf(full_file_name, BUFLEN - 1, "%s/%s", FOLDER_STATE, file_name);
   file_size = get_file_size(full_file_name);
@@ -461,6 +469,7 @@ void Verifier::begin_pepper() {
   if (num_verification_runs == 0)
     num_verification_runs = 1;
 
+#ifndef USE_LIBSNARK
   // verify the computation is done correctly
   bool result = true;
   // prepare for the verification by loading VK.
@@ -472,13 +481,84 @@ void Verifier::begin_pepper() {
     }
     m_runtests.end();
   }
+#endif
 
+#ifdef USE_LIBSNARK
+
+   cout << "v_current_mem_before_ls_verifier " << getCurrentRSS() << endl;
+   cout << "v_peak_mem_before_ls_verifier " << getPeakRSS() << endl;
+   m_runtests.begin_with_init();
+   typedef Fr<bn128_pp> FieldT;
+   string filename = FOLDER_STATE;
+   filename += "/libsnark_vk";
+   ifstream vkey(filename);
+
+   r1cs_ppzksnark_processed_verification_key<bn128_pp> pvk;
+   vkey >> pvk;
+   
+   r1cs_variable_assignment<Fr<bn128_pp> > inputvec;
+   r1cs_ppzksnark_proof<bn128_pp> proof;
+
+   recv_file((char *) "libsnark_proof");
+   filename = FOLDER_STATE;
+   filename +="/libsnark_proof";
+   ifstream proof_file(filename);
+
+   proof_file >> proof;
+   proof_file.close();
+
+   ifstream inputs("./bin/inputs");
+   inputs >> noskipws;
+   char c;
+
+   int numInputs;
+   inputs >> numInputs >> c;
+
+   for (int j = 1; j <= numInputs; j++)
+   {
+     FieldT currentVar = FieldT::getTextVar(inputs);        
+     inputvec.push_back(currentVar);
+     inputs >> c;
+   }
+   inputs.close();   
+
+   ifstream outputs("./bin/outputs");
+   outputs >> noskipws;
+ 
+   int numOutputs;
+   outputs >> numOutputs >> c;
+
+   for (int j = 1; j <= numOutputs; j++)
+   {
+     FieldT currentVar = FieldT::getTextVar(outputs);        
+     inputvec.push_back(currentVar);
+     outputs >> c;
+   }
+   outputs.close();   
+  
+   bool ans = true;
+   m_runtests.end();
+   cout <<"v_load_proof " << m_runtests.get_papi_elapsed_time() << endl;
+
+   m_runtests.begin_with_init();
+
+   for (int i = 0; i < num_verification_runs; i++)
+     ans = ans & r1cs_ppzksnark_online_verifier_strong_IC<bn128_pp>(pvk, inputvec, proof);
+
+   bool  result = ans; 
+
+   m_runtests.end();
+   cout << "v_current_mem_before_ls_verifier " << getCurrentRSS() << endl;
+   cout << "v_peak_mem_after_ls_verifier " << getPeakRSS() << endl;
+#endif
+     
   if (false == result)
     cout <<endl<<"LOG: The prover failed one of the tests; set VERBOSE to 1 to find the test that failed"<<endl<<endl;
   else
     cout <<endl<<"LOG: The prover passed the decommitment test and PCP tests"<<endl<<endl;
   
   // output measurements.
+  cout << "num_verification_runs: " << num_verification_runs << endl;
   cout << "v_setup_total " << v_setup_total << endl;
   cout << "v_run_pcp_tests " << m_runtests.get_ru_elapsed_time()/num_verification_runs << endl;
   cout << "v_run_pcp_tests_latency " << m_runtests.get_papi_elapsed_time()/num_verification_runs << endl;
@@ -500,3 +580,4 @@ void Verifier::begin_pepper() {
   MPI_Finalize();
 #endif
 }
+

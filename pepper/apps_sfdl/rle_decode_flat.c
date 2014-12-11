@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#define OUTPUT_SIZE 1024
+#define OUTPUT_SIZE 5450
 
 // decode a run-length encoded sequence
 // format is

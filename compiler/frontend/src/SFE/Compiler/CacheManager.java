@@ -58,20 +58,28 @@ public class CacheManager {
                     // if the variable's value is 0, no; else, yes
                     final LvalExpression lvAssign = Function.getVars().getVar(lval.getName());
                     if (null != lvAssign) {
-                        final AssignmentStatement lvAssignSt = (AssignmentStatement) lvAssign.getAssigningStatement();
-                        if (null != lvAssignSt) {
-                            // get the RHS of the assignment
-                            final Expression[] assignRHS = lvAssignSt.getAllRHS();
-                            // if this is a compound assignment, or not an integer constant, force a flush
-                            if (assignRHS.length > 1 || ! (assignRHS[0] instanceof IntConstant || assignRHS[0] instanceof FloatConstant)) {
-                                doFlush = true;
-                            } else {
-                                // this is a constant; make sure it's zero
-                                final FloatConstant assignConst = FloatConstant.toFloatConstant(assignRHS[0]);
-                                if (! assignConst.isZero()) {
+                        final StatementWithOutputLine lvAssignTmp = lvAssign.getAssigningStatement();
+                        // if this is an AssignmentStatement, we can get its value
+                        // otherwise it is something else, e.g., an InputStatement
+                        // and we cannot assume it has value = 0.
+                        if (lvAssignTmp instanceof AssignmentStatement) {
+                            final AssignmentStatement lvAssignSt = (AssignmentStatement) lvAssign.getAssigningStatement();
+                            if (null != lvAssignSt) {
+                                // get the RHS of the assignment
+                                final Expression[] assignRHS = lvAssignSt.getAllRHS();
+                                // if this is a compound assignment, or not an integer constant, force a flush
+                                if (assignRHS.length > 1 || ! (assignRHS[0] instanceof IntConstant || assignRHS[0] instanceof FloatConstant)) {
                                     doFlush = true;
+                                } else {
+                                    // this is a constant; make sure it's zero
+                                    final FloatConstant assignConst = FloatConstant.toFloatConstant(assignRHS[0]);
+                                    if (! assignConst.isZero()) {
+                                        doFlush = true;
+                                    }
                                 }
                             }
+                        } else {
+                            doFlush = true;
                         }
                     }
                 }

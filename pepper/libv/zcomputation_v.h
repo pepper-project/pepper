@@ -15,6 +15,7 @@
 
 class ZComputationVerifier : public Verifier {
   protected:
+    string qap_fn;
     int chi, n;
     int n_prime;
 
@@ -114,6 +115,9 @@ class ZComputationVerifier : public Verifier {
     void test_noninteractive_protocol(uint32_t beta);
     void prepare_noninteractive_answers(uint32_t beta);
     bool run_noninteractive_tests(uint32_t beta);
+#ifdef USE_LIBSNARK
+    void generate_libsnark_keys();
+#endif
 #if GGPR == 1
     void create_noninteractive_GGPR_query();
     bool run_noninteractive_GGPR_tests(uint32_t beta);

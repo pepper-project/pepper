@@ -1,7 +1,7 @@
 #include <stdint.h>
 
-#define NDEEP 4096
-#define NELMS 4096
+#define NDEEP 16384
+#define NELMS 16384
 
 struct In { uint32_t input[NELMS]; };
 struct Out { uint32_t value; };

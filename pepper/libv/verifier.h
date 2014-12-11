@@ -7,6 +7,17 @@
 #include <common/utility.h>
 #include <vector>
 
+
+
+#ifdef USE_LIBSNARK
+#include "r1cs/r1cs.hpp"
+#include "common/types.hpp"
+#include "r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+#include "algebra/curves/public_params.hpp"
+#include "encoding/knowledge_commitment.hpp"
+#include "algebra/fields/fp.hpp" 
+#endif
+
 #ifdef INTERFACE_MPI
 #include <libv/mpi_constants.h>
 #include "mpi.h"
@@ -20,7 +31,7 @@
 class Verifier {
   protected:
     Venezia * v;
-    Measurement m_plainq, m_runtests;
+    Measurement m_plainq, m_runtests, m_create_libsnark_key;
 
     int batch_size;
     int num_repetitions;
@@ -44,8 +55,8 @@ class Verifier {
     mpq_t *input_q, *output_q;
     int size_input, size_output, size_constants, size_f1_vec, size_f2_vec;
 
-    long network_bytes_sent, network_bytes_input_sent;
-    long network_bytes_rcvd, network_bytes_output_rcvd;
+    long long int network_bytes_sent, network_bytes_input_sent;
+    long long int network_bytes_rcvd, network_bytes_output_rcvd;
     double network_send_time_elapsed;
     double network_rcv_time_elapsed;
 
@@ -92,6 +103,11 @@ class Verifier {
     void recv_comm_answers();
     void recv_outputs();
     void recv_plain_answers();
+
+#ifdef USE_LIBSNARK
+     libsnark::Fr<libsnark::bn128_pp> getVar(ifstream &fs);
+#endif
+
     //void begin_interactive_pepper();
     //void begin_noninteractive_pepper();
 

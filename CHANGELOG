@@ -1,6 +1,10 @@
-Version 1.0 (tag: V1.0), August 6 2013
+Version 1.0 (tag: V1.0), August 6 2014
   + Initial code release
 
-Version 1.1 (tag: V1.1), August 12 2013
+Version 1.1 (tag: V1.1), August 12 2014
   + Compiler optimizes away stores of 0 to previously uninitialized
     RAM locations, since these locations by default have value 0.
+
+Version 1.2 (tag: V1.2), December 6 2014
+  + Added libsnark backend integration
+  + Minor compiler updates and general bugfixes

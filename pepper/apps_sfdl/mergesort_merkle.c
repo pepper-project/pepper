@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <db.h>
 
-#define MAX_SIZE 4
+#define MAX_SIZE 8
 
 struct In { uint32_t input[MAX_SIZE]; } ;
 struct Out { uint32_t output[MAX_SIZE]; } ;

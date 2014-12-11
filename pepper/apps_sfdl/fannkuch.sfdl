@@ -15,7 +15,7 @@ program fannkuch {
   const m = 13;
   const Fn = {0, 0, 1, 2, 4, 7, 10, 16, 22, 30, 38, 51, 65, 80};
   const log2_m = 5;
-  const L = 100;
+  const L = 850;
 
   //types
   type iterator = float; //The type of loop iterators is ignored

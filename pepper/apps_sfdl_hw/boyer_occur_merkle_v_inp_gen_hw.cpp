@@ -38,8 +38,13 @@ void boyer_occur_merkleVerifierInpGenHw::create_input(mpq_t* input_q, int num_in
         i++;
   }
 
+  int j;
   srand(time(NULL));
-  for(int j = 0; j < PATTERN_LENGTH; j++) {
+  for(j = 0; j < PATTERN_LENGTH; j++) {
       mpq_set_ui(input_q[i+j], rand() % ALPHABET_LENGTH, 1);
   }
+
+  //  for(int k=i+j; i<num_inputs; k++) {
+  //      mpq_set_ui(input_q[k], 0, 1);
+  //  }
 }

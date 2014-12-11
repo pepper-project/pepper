@@ -256,7 +256,7 @@ grep -cve '^\s*$' "${circuitFile}"
 #Second expression combining pass (more powerful with profiling information)
 mv -f "$circuitFile" "${circuitFile}2"
 #Perform profiling on the circuit
-$TIMER "metric_compile_tac2_utime $classname %U\nmetric_compile_tac2_stime $classname %S\n" perl -e 'print reverse <>' < "${circuitFile}2" > "${circuitFile}2.tac"
+$TIMER "metric_compile_tac2_utime $classname %U\nmetric_compile_tac2_stime $classname %S\n" tac < "${circuitFile}2" > "${circuitFile}2.tac"
 
 $PRINT_TIME
 
@@ -269,12 +269,20 @@ if [ $? != 0 ]; then
 
 $PRINT_TIME
 
-$TIMER "metric_compile_untac2_utime $classname %U\nmetric_compile_untac2_stime $classname %S\n" perl -e 'print reverse <>' < "${circuitFile}2.tac.profile" > "${circuitFile}2.profile"
+$TIMER "metric_compile_untac2_utime $classname %U\nmetric_compile_untac2_stime $classname %S\n" tac < "${circuitFile}2.tac.profile" > "${circuitFile}2.profile"
 
 $PRINT_TIME
 
+# don't need these any more. save disk space
+rm "${circuitFile}2.tac.profile"
+rm "${circuitFile}2.tac"
+
 #Do optimization based on the .profile file
 $TIMER "metric_compile_2_utime $classname %U\nmetric_compile_2_stime $classname %S\n" java "$javaargs" -cp frontend/bin zcc.ZCC --profile ${circuitFile}2.profile ${circuitFile}2 $compileropts c${inlining}wfa "$path"
+
+# don't need these any more. save disk space
+rm "${circuitFile}2"
+rm "${circuitFile}2.profile"
 
 if [ $? != 0 ]; then 
 { 
@@ -306,7 +314,7 @@ if [ 1 == 0 ]; then
 #One additional pass without optimization to remove fractions and output .spec files, plus a second pass of dead code elimination
 mv -f "$circuitFile" "${circuitFile}4"
 #Perform profiling on the circuit
-$TIMER "metric_compile_tac4_utime $classname %U\nmetric_compile_tac4_stime $classname %S\n" perl -e 'print reverse <>' < "${circuitFile}4" > "${circuitFile}4.tac"
+$TIMER "metric_compile_tac4_utime $classname %U\nmetric_compile_tac4_stime $classname %S\n" tac < "${circuitFile}4" > "${circuitFile}4.tac"
 
 $PRINT_TIME
 $TIMER "metric_compile_p4_utime $classname %U\nmetric_compile_p4_stime $classname %S\n" java "$javaargs" -cp frontend/bin zcc.ZCC $compileropts p ${circuitFile}4.tac
@@ -317,7 +325,7 @@ if [ $? != 0 ]; then
 
 $PRINT_TIME
 
-$TIMER "metric_compile_untac4_utime $classname %U\nmetric_compile_untac4_stime $classname %S\n" perl -e 'print reverse <>' < "${circuitFile}4.tac.profile" > "${circuitFile}4.profile"
+$TIMER "metric_compile_untac4_utime $classname %U\nmetric_compile_untac4_stime $classname %S\n" tac < "${circuitFile}4.tac.profile" > "${circuitFile}4.profile"
 
 $PRINT_TIME
 #Run the compiler

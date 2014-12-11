@@ -111,6 +111,9 @@ void Prover::init_state() {
   snprintf(scratch_str, BUFLEN - 1, "prime_f_%d.txt", num_bits_in_prime);
 #else
   snprintf(scratch_str, BUFLEN - 1, "prime_libzm_%d.txt", num_bits_in_prime);
+   #ifdef USE_LIBSNARK
+       snprintf(scratch_str, BUFLEN - 1, "prime_libsnark_%d.txt", num_bits_in_prime);
+   #endif
 #endif
 #else
   snprintf(scratch_str, BUFLEN - 1, "prime_%d.txt", num_bits_in_prime);
@@ -243,8 +246,8 @@ void Prover::handle_terminal_request() {
   m_dist.begin_with_init();
 
   if (phase == PHASE_PROVER_DEDUCE_QUERIES && ((batch_start == -1 && batch_end == -1) || is_master == 1)) {
-    v->init_prng_decommit_queries();
-    deduce_queries();
+     v->init_prng_decommit_queries();
+      deduce_queries();
     return;
   }
 
@@ -290,11 +293,15 @@ void Prover::handle_terminal_request() {
   m_dist.end();
 
   double p_answer_plainq_par = 0;
-
+  Measurement mt;
   switch (phase) {
   case PHASE_PROVER_COMMITMENT:
     // merge this into prover_computation_commitment with compiler flag. prover_noninteractive();
+   
+    mt.begin_with_init();
     prover_computation_commitment();
+    mt.end();
+    cout << "p_comp_comm " << mt.get_papi_elapsed_time() << endl;
     break;
 
   case PHASE_PROVER_DEDUCE_QUERIES:

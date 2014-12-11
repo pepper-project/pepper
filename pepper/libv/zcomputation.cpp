@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
                                   optimize_answers, prover_url);
     verifier.begin_pepper();
   } else {  // prover
+    cout << endl << "constructing prover" << endl << endl;
     ZComputationProver prover(0 /*phase*/, batch_size, num_repetitions, input_size);
     prover.handle_requests();
   }

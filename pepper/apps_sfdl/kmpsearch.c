@@ -1,7 +1,7 @@
 #include <stdint.h>
 
-#define NEEDLE 16
-#define HAYSTACK 192
+#define NEEDLE 36
+#define HAYSTACK 432
 
 struct In { char needle[NEEDLE]; char haystack[HAYSTACK]; };
 struct Out { int match; };

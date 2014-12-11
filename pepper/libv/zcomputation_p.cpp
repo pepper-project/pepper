@@ -1,5 +1,11 @@
 #include <libv/zcomputation_p.h>
 #include <storage/ram_impl.h>
+#include <fstream>
+#include <common/memory.h>
+
+#ifdef USE_LIBSNARK
+   using namespace libsnark;
+#endif
 
 ZComputationProver::
 ZComputationProver(int ph, int b_size, int num_r, int size_input,
@@ -28,6 +34,7 @@ ZComputationProver(int ph, int b_size, int num_r, int size_input,
   num_local_runs = NUM_LOCAL_RUNS;
   init_state(file_name_f1_index);
   init_qap(file_name_qap);
+
 }
 
 ZComputationProver::
@@ -56,6 +63,8 @@ ZComputationProver(int ph, int b_size, int num_r, int size_input,
   num_local_runs = NUM_LOCAL_RUNS;
   init_state(file_name_f1_index);
   init_qap(file_name_qap);
+
+
 }
 
 void ZComputationProver::init_qap(const char *file_name_qap) {
@@ -69,13 +78,15 @@ void ZComputationProver::init_qap(const char *file_name_qap) {
     cout<<"size_output "<<size_output<<endl; 
   }
 
+
   // set the roots
+#ifndef USE_LIBSNARK 
   qap_roots.SetLength(size_f2_vec);
   qap_roots2.SetLength(size_f2_vec-1);
   single_root.SetLength(1);
   set_v.SetLength(size_f2_vec);
   v_prime.SetLength(size_f2_vec);
-
+  
   alloc_init_vec(&set_v_z, size_f2_vec);
   
   #if FAST_FOURIER_INTERPOLATION == 1
@@ -102,15 +113,15 @@ void ZComputationProver::init_qap(const char *file_name_qap) {
     mpz_get_str(str, 10, set_v_z[i]);
     conv(set_v[i], to_ZZ(str));
   }
-
+  
   poly_tree = new ZZ_pX[2*size_f2_vec-1];
   interpolation_tree = new ZZ_pX[2*size_f2_vec-1];
   num_levels = ((log(size_f2_vec)/log(2)));
-    
+  
   z_poly_A_c.SetMaxLength(size_f2_vec);
   z_poly_B_c.SetMaxLength(size_f2_vec);
   z_poly_C_c.SetMaxLength(size_f2_vec);
-
+  
   #if FAST_FOURIER_INTERPOLATION == 1
   ZZ_p omega_zz;
   mpz_get_str(str, 10, omega);
@@ -141,6 +152,8 @@ void ZComputationProver::init_qap(const char *file_name_qap) {
   BuildFromRoots(z_poly_D_c, qap_roots2);
 
   // compute these based on values set by the compiler
+
+  
   poly_A = (poly_compressed *) malloc(num_aij * sizeof(poly_compressed));
   poly_B = (poly_compressed *) malloc(num_bij * sizeof(poly_compressed));
   poly_C = (poly_compressed *) malloc(num_cij * sizeof(poly_compressed));
@@ -165,6 +178,8 @@ void ZComputationProver::init_qap(const char *file_name_qap) {
   }
 
   // create vectors to store the evaluations of the polynomial at r_star
+  
+  
   alloc_init_vec(&eval_poly_A, n+1);
   alloc_init_vec(&eval_poly_B, n+1);
   alloc_init_vec(&eval_poly_C, n+1);
@@ -180,9 +195,11 @@ void ZComputationProver::init_qap(const char *file_name_qap) {
   char line[BUFLEN];
   //mpz_t temp;
   //alloc_init_scalar(temp);
-
+  // Measurement m_qap;
+  // m_qap.begin_with_init();
   // fill the array of struct: poly_A, poly_B, and poly_C
   int line_num = 0;
+  
   while (fgets(line, sizeof line, fp) != NULL) {
     if (line[0] == '\n')
       continue;
@@ -195,7 +212,12 @@ void ZComputationProver::init_qap(const char *file_name_qap) {
     }
     line_num++;
   }
+  
   fclose(fp);
+
+#endif //USE_LIBSNARK
+  //  m_qap.end();
+  // cout << "prover time to load qap" << m_qap.get_papi_elapsed_time() << endl;
 }
 
 void ZComputationProver::init_state(const char *file_name_f1_index) {
@@ -363,9 +385,9 @@ ZComputationProver::~ZComputationProver() {
   clear_vec(size_f1_vec, F1_q);
 
   clear_vec(size_f2_vec, F2);
-
+#ifndef USE_LIBSNARK
   clear_vec(size_f2_vec, set_v_z);
-
+#endif
   clear_vec(size_input + size_output, input_output);
   clear_vec(size_input + size_output, input_output_q);
 
@@ -814,6 +836,21 @@ void ZComputationProver::prover_do_computation() {
       // shuffle the explicit inputs, in case of MapRed
       //exogenous_checker->run_shuffle_phase(i, FOLDER_STATE);
     }
+#ifdef USE_LIBSNARK
+     ofstream outfile1("./bin/inputs");
+  outfile1 << size_input << endl;
+  //cout << size_input<< endl;
+  for (int i = 0; i < size_input; i++)
+    outfile1 << input[i] << endl;
+  outfile1.close();
+ 
+  ofstream outfile2("./bin/outputs");
+  //cout << size_output<< endl; 
+  outfile2 << size_output << endl;
+  for (int i = 0; i < size_output; i++)
+    outfile2 << output[i] << endl;
+  outfile2.close();
+ #endif
 
     m_interpret_cons.end();
     
@@ -821,7 +858,7 @@ void ZComputationProver::prover_do_computation() {
       cout << "LOG: Running exogenous_check" << endl;
 
     passed_test &= exogenous_checker->exogenous_check(input, input_q, size_input, output, output_q, size_output, prime);
-
+#ifndef USE_LIBSNARK
     if (i==batch_start)
       cout << "LOG: Prover is filling in the proof vector" << endl;
 
@@ -835,13 +872,15 @@ void ZComputationProver::prover_do_computation() {
     //instance
     v->get_random_priv(delta_abc[0], prime);
     v->get_random_priv(delta_abc[1], prime);
-    v->get_random_priv(delta_abc[2], prime);
+    v->get_random_priv(delta_abc[2], prime); 
 #endif
 
 #ifndef DEBUG_MALICIOUS_PROVER
-    compute_assignment_vectors();
+      compute_assignment_vectors();
 #endif
-
+      
+      
+  
     m_proofv_creation.end();
 
 #if PROTOCOL == PINOCCHIO_ZK
@@ -855,6 +894,8 @@ void ZComputationProver::prover_do_computation() {
 
     snprintf(scratch_str, BUFLEN-1, "f2_assignment_vector_b_%d", i);
     dump_vector(size_f2_vec, F2, scratch_str, FOLDER_WWW_DOWNLOAD);
+
+#endif
   }
 
   if (passed_test)
@@ -863,26 +904,44 @@ void ZComputationProver::prover_do_computation() {
     cout << endl << "LOG: Output computation failed the exogenous check and I am killing the prover." << endl << endl;
     exit(1);
   }
-
-  delete[] poly_tree;
-  delete[] interpolation_tree;
+#ifndef USE_LIBSNARK
+   delete[] poly_tree;
+   delete[] interpolation_tree;
+#endif
   z_poly_A_pv.SetLength(0);
   z_poly_B_pv.SetLength(0);
   z_poly_C_pv.SetLength(0);
+
 }
 
 //PROVER's CODE
 void ZComputationProver::prover_computation_commitment() {
+
+  Measurement mt;
+  mt.begin_with_init();
   init_block_store();
-
+ mt.end();
+ cout << "init_block_store: " << mt.get_papi_elapsed_time() << endl;
   // execute the computation
-  prover_do_computation();
 
+
+  
+  mt.begin_with_init();
+  prover_do_computation();
+ mt.end();
+ cout << "p_do_comp: " << mt.get_papi_elapsed_time() << endl;
+ 
+  
 #if NONINTERACTIVE == 1
   prover_noninteractive();
-#else
+ #else
   prover_interactive();
 #endif
+
+ cout << "p_current_mem_after_ls_prover " << getCurrentRSS() << endl;
+ cout << "p_peak_mem_after_ls_prover " << getPeakRSS() << endl;
+
+
 }
 
 #if NONINTERACTIVE == 1
@@ -971,7 +1030,7 @@ void ZComputationProver::prover_noninteractive() {
 #if GGPR == 1
   prover_noninteractive_GGPR();
 #else
-
+#ifndef USE_LIBSNARK
 #if PROTOCOL == PINOCCHIO_ZK  
   load_vector_G1(1, &g_a_D, (char *)"g_a_D", FOLDER_WWW_DOWNLOAD);
   load_vector_G1(1, &g_b_D, (char *)"g_b_D", FOLDER_WWW_DOWNLOAD);
@@ -986,13 +1045,14 @@ void ZComputationProver::prover_noninteractive() {
   load_vector_G1(1, &g_b_beta_D, (char *)"g_b_beta_D", FOLDER_WWW_DOWNLOAD);
   load_vector_G1(1, &g_c_beta_D, (char *)"g_c_beta_D", FOLDER_WWW_DOWNLOAD);
 #endif
+#endif
 
   for (int i=batch_start; i<=batch_end; i++) {
     if (i == 0)
       m_answer_queries.begin_with_init();
     else
       m_answer_queries.begin_with_history();
-
+#ifndef USE_LIBSNARK
     snprintf(scratch_str, BUFLEN-1, "f1_assignment_vector_b_%d", i);
     load_vector(size_f1_vec, F1, scratch_str, FOLDER_WWW_DOWNLOAD);
 
@@ -1105,7 +1165,107 @@ void ZComputationProver::prover_noninteractive() {
     dump_vector_G1(size_answer_G1, f_ni_answers_G1, scratch_str, FOLDER_WWW_DOWNLOAD);
     snprintf(scratch_str, BUFLEN-1, "f_answers_G2_b_%d", i);
     dump_vector_G2(size_answer_G2, f_ni_answers_G2, scratch_str, FOLDER_WWW_DOWNLOAD);
+#endif
+#ifdef USE_LIBSNARK
+    cout << "p_current_mem_before_ls_prover " << getCurrentRSS() << endl;
+    cout << "p_peak_mem_before_ls_prover " << getPeakRSS() << endl;
+    //    start_profiling();
+    typedef Fr<bn128_pp> FieldT;
+    init_public_params<bn128_pp>();    
+    string filename = FOLDER_STATE;
+    filename += "/libsnark_pk";
+    //cout << "FILENAME: " << filename << endl;;
+       
+    ifstream pkey(filename);
+    r1cs_ppzksnark_keypair<bn128_pp> keypair;
 
+    Measurement m_key;
+    cout << "reading proving key from file..." << endl;
+
+    m_key.begin_with_init();
+    pkey >> keypair.pk;
+    m_key.end();
+    cout << "m_load_key: " << m_key.get_papi_elapsed_time() << endl;
+
+    r1cs_variable_assignment<Fr<bn128_pp> > va;
+
+    ifstream inputs("./bin/inputs");
+    ifstream outputs("./bin/outputs");
+    ifstream variables("./bin/f1vec");
+    
+    variables >> std::noskipws;
+    inputs >> std::noskipws;
+    outputs >> std::noskipws;
+    char c;
+
+    m_key.begin_with_init();
+    int n = 4;
+    int numInputs;
+    inputs >> numInputs >> c;
+    // std::cout << "NUMBER OF INPUTS: " << numInputs << std::endl;
+    for (int j = 1; j <= numInputs; j++)
+    {
+        FieldT currentVar = FieldT::getTextVar(inputs);
+        va.push_back(currentVar);
+        inputs >> c;
+    }
+
+    int num_outputs;
+    outputs >> num_outputs >> c;
+    // std::cout << "NUMBER OF OUTPUTS: " << num_outputs << std::endl;
+    for (int i = 1; i <= num_outputs; i++)
+    {
+        FieldT currentVar = FieldT::getTextVar(outputs);
+        va.push_back(currentVar);
+        outputs >> c;
+    }
+
+    int num_intermediate_vars;
+    variables >> num_intermediate_vars >> c;
+    // std::cout << "NUMBER OF VARIABLES: " << num_intermediate_vars << std::endl;
+    for (int i = 1; i <= num_intermediate_vars; i++)
+    {
+      FieldT currentVar = FieldT::getTextVar(variables);
+      va.push_back(currentVar);
+      variables >> c;
+    }
+
+    inputs.close();
+    outputs.close();
+    variables.close();
+
+    int num_vars = num_intermediate_vars + num_outputs + numInputs + 1;
+
+    FieldT fin = FieldT::zero();
+    for (int i = 1; i < num_vars; ++i)
+    {
+       fin = fin + va[i-1];
+    }
+   
+    va.push_back(fin.squared());
+    m_key.end();
+    cout << "p_load_vars " << m_key.get_papi_elapsed_time() << endl;
+
+    m_key.begin_with_init();
+    m_queries.begin_with_init();
+    r1cs_ppzksnark_proof<bn128_pp> proof = r1cs_ppzksnark_prover<bn128_pp>(keypair.pk, va, ::starttimers);
+    m_proofv.end();
+    m_key.end();
+    cout << "p_compute_proof " << m_key.get_papi_elapsed_time() << endl;
+    cout << "p_compute_abchk " << m_queries.get_papi_elapsed_time() << endl;
+    cout << "p_compute_proofv " << m_proofv.get_papi_elapsed_time() << endl;
+    filename = FOLDER_STATE;
+    filename += "/libsnark_proof";
+
+    m_key.begin_with_init(); 
+    ofstream proof_file(filename);
+    proof_file << proof; 
+    m_key.end();
+    cout << "p_write_proof " << m_key.get_papi_elapsed_time() << endl;
+   
+    proof_file.close();
+  
+#endif
     m_answer_queries.end();
   }
 #endif
@@ -1385,3 +1545,11 @@ void ZComputationProver::build_poly_tree(int level, int j, int index) {
     mul(poly_tree[index], poly_tree[2*index+1], poly_tree[2*index+2]);
   }
 }
+
+#ifdef USE_LIBSNARK
+void starttimers(void)
+{
+  m_queries.end();
+  m_proofv.begin_with_init();
+}
+#endif

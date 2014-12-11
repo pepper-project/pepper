@@ -17,6 +17,9 @@
 #include <string>
 #include <boost/unordered_map.hpp>
 
+
+
+
 ComputationProver::
 ComputationProver(int ph, int b_size, int num_r, int size_input,
     const char *name_prover) : Prover(ph, b_size, num_r, size_input, name_prover) {
@@ -30,10 +33,10 @@ ComputationProver(int ph, int b_size, int num_r, int size_input,
 }
 
 ComputationProver::~ComputationProver() {
-  if (_ram != NULL)
-    delete _ram;
-  if (_blockStore != NULL)
-    delete _blockStore;
+   if (_ram != NULL)
+     delete _ram;
+   if (_blockStore != NULL)
+     delete _blockStore;
 }
 
 static void zcomp_assert(const char* a, const char* b,
@@ -1276,4 +1279,18 @@ void ComputationProver::compute_from_pws(const char* pws_filename) {
 
   // convert F1_q to F1
   convert_to_z(num_vars, F1, F1_q, prime);
+  
+#ifdef USE_LIBSNARK
+  std::ofstream outfile("./bin/f1vec");
+  outfile << num_vars << endl;
+  for (int ind = 0; ind < num_vars; ind++)
+    outfile << F1[ind] << std::endl;
+  outfile.close();
+#endif
+  
+
+
+
+ 
+
 }

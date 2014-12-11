@@ -39,4 +39,8 @@ void ptrchase_merkleVerifierInpGenHw::create_input(mpq_t* input_q, int num_input
       mpq_set_ui(input_q[i+j], j+1, 1);
   }
   mpq_set_ui(input_q[i+NELMS-1], 0, 1);
+
+  for (int j = i+NELMS; j<num_inputs; j++) {
+      mpq_set_ui(input_q[j], 0, 1);
+  }
 }

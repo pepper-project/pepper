@@ -1,85 +1,66 @@
 This source code is released under a BSD-style license. See LICENSE
 for more details.
 
-I. Installation
-  
-  This codebase requires the following dependent packages. Get in touch
-  with us if you face issues (see the contact information below)
+I. Installation and first steps
 
-  1. gmp with C++ extensions enabled
-  2. PAPI
-  3. Chacha pseudorandom number generator (use the assembly version for
-  high performance)
-  4. NTL with NTL_GMP_LIP=on 
-  5. libconfig
-  6. Cheetah template library
-  7. OpenMPI
-  8. CUDA packages (if you would like your installation to use GPUs,
-  which would require setting USE_GPU to 1 in the makefile)
-  9. GMPMEE 
- 10. go
- 11. python
- 12. OpenSSL
- 13. fcgi
- 14. PBC (from Stanford)
- 15. ant
- 16. boost
- 17. LevelDB
- 18. KyotoCabinet
- 19. libzm (from https://github.com/herumi/ate-pairing.git)
- 20. Java (1.7 or higher)
- 21. LLVM/Clang. (See compiler/buffetfsm/README.md for build information.)
+  1. Please run
+    git submodule init
+    git submodule update
+  to pull in the submodules this project relies on.
+  
+  2. This codebase depends on several external libraries. Please
+  see the INSTALLING.txt file for more information on setting up
+  dependencies.
+
+  3. If you haven't already done so, see compiler/buffetfsm/README.md
+  for instructions on building the patched Clang/LLVM libraries we
+  need for the buffet::fsm C-to-C compiler.
+
+  4. We recommend using the libsnark backend. If you've pulled in the
+  submodules (Step 1, above), you've already got a local copy. Finish
+  preparing it as follows:
+    cd libsnark
+    ./prepare-depends.sh
+    make lib STATIC=1
+  and make sure that USE_LIBSNARK=1 is set in the pepper/flags file.
+
+  5. Now that everything is set up, you're ready to run some verified
+  computations! Please have a look at GETTINGSTARTED.md for a quick
+  overview of the process.
+
+  6. If you want to run tinyram programs, make sure you've pulled in
+  the submodules as described above, then cd `tinyram/doc`. If you have
+  pandoc and LaTeX available, `make` will generate useful documentation.
+  The README.md file in that directory has instructions on how to run
+  tinyram computations.
 
 II. Configuration
 
   - To select different verifiable computation protocols (Zaatar,
-    Ginger, Pinocchio, etc.), please see common/utility.h
+    Ginger, Pinocchio, etc.), please see common/utility.h.
+    Note that when USE_LIBSNARK=1 is set in pepper/flags, the
+    correct backend is selected automatically.
   
   - The compiler generates two types of constraints depending on the
     value of FRAMEWORK in the makefile
     
     - FRAMEWORK should be set to ZAATAR for using Zaatar's and
-      Pinocchio's verification machinery.
+      Pinocchio's verification machinery. This is the default
+      setting, and the correct one to use with the libsnark,
+      Pinocchio, and Zaatar backends.
 
     - FRAMEWORK should be set to GINGER to use ginger's verification
       machinery.
 
-III. Running examples
-  
-  (1) With a single machine, for testing purposes.
+III. What is new in this version?
 
-    Suppose the computation is pepper/apps_sfdl/mm.c, then
-    use the following commands.
+  (1) Integrated the libsnark backend from https://github.com/scipr-lab/libsnark
 
-    cd pepper
-    ./run/run_pepper.sh mm
-    
-    (Note: The first time a new computation is compiled, the above
-    command will fail with "No target to compile ... _p_exo.o". In that
-    case, re-run the above command and it should work.)
-    
-  (2) With a cluster, for experiments.
+  (2) Update to the C-to-constraints compiler's memory optimization routines
 
-    Please refer to
-    http://www.tacc.utexas.edu/user-services/user-guides/longhorn-user-guide
-    for launching a job on TACC. 
+  (3) General bug fixes
 
-IV. What is new in this version?
-  
-  (1) a better implementation of RAM operations by adapting
-  ideas from TinyRAM
-    
-    - For an example of this, see apps_sfdl/fast_ram_test.c
-
-  (2) a C-to-C compiler for transforming data dependent loops into finite
-  state machines amenable to efficient compilation. Automatically invoked
-  when the source text uses the "buffet::fsm" C++11-style attribute.
-
-  NOTE that you will need to build a local copy of LLVM and Clang with
-  patches enabling this new attribute. See compiler/buffetfsm/README.md
-  for instructions on how to do this.
-
-V. Contact
+IV. Contact
 Please contact
     srinath at cs dot utexas dot edu
 or

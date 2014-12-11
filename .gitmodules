@@ -1,3 +1,6 @@
 [submodule "tinyram"]
 	path = tinyram
 	url = https://github.com/pepper-project/tinyram
+[submodule "libsnark"]
+	path = libsnark
+	url = https://github.com/pepper-project/libsnark

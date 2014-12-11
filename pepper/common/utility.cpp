@@ -224,7 +224,7 @@ bool open_file(FILE **fp, const char *vec_name, const char *permission, const ch
   return *fp == NULL;
 }
 
-int stat_size(const char* filename, const char*folder_name) {
+long long int stat_size(const char* filename, const char*folder_name) {
   char file_name[BUFLEN];
 
   if (folder_name == NULL)
@@ -326,7 +326,7 @@ void dump_vector(int size, char *arr, const char *vec_name, const char *folder_n
     cout<<"Cannot create "<<vec_name<<" at "<<folder_name<<endl;
     exit(1);
   }
-
+  
   for (int i=0; i<size; i++)
     fprintf(fp, "%c", arr[i]);
 
@@ -337,7 +337,7 @@ bool dump_vector(int size, const mpz_t *q, const char *vec_name, const char *fol
   FILE *fp;
   open_file(&fp, vec_name, (char *)"wb", folder_name);
   if (fp == NULL) return false;
-
+//cout << "WRITING TO FILE: " << folder_name << vec_name << endl;
   for (int i=0; i<size; i++)
     mpz_out_raw(fp, q[i]);
 

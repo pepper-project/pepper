@@ -38,6 +38,7 @@ variables = False  #variables
 proverBugginess = 0 # a number from 0 to 1 determining the probability of
                     # the prover skipping a proof variable.
 class_name = ""
+output_dir = ""
 printMetrics = False
 
 
@@ -1698,6 +1699,10 @@ def generate_zaatar_matrices(spec_file, shuffled_indices, qap_file_name):
 
   print "metric_num_constraints_nonpot %s %d" % (class_name, num_constraints);
 
+  fpCons = open(os.path.join(output_dir, "bin/" + class_name + ".number_of_constraints"), "w")
+  fpCons.write(str(num_constraints));
+  fpCons.close();
+
   if NzA == 0:
     NzA = 1
     fp_matrix_a.write("0 0 0\n")
@@ -1727,9 +1732,11 @@ def generate_zaatar_matrices(spec_file, shuffled_indices, qap_file_name):
   fp.write("\n");
   fp.close();
 
-  os.system("rm " + file_matrix_a)
-  os.system("rm " + file_matrix_b)
-  os.system("rm " + file_matrix_c)
+ # os.system("mv " + file_matrix_a + " " + "../../pepper/libsnark/src/r1cs_ppzksnark/examples/" + class_name + ".A")
+ # os.system("mv " + file_matrix_b + " " + "../../pepper/libsnark/src/r1cs_ppzksnark/examples/" + class_name + ".B")
+ # os.system("mv " + file_matrix_c + " " + "../../pepper/libsnark/src/r1cs_ppzksnark/examples/" + class_name + ".C")
+ # os.system("rm " + file_matrix_b)
+ # os.system("rm " + file_matrix_c)
 
   return (NzA, NzB, NzC, chi)
 

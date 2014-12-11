@@ -1,7 +1,7 @@
 #include <stdint.h>
 
-#define N 250
-#define K 500
+#define N 1150
+#define K 2300
 
 // sparse matrix * vector multiplication
 // N x N matrix with K nonzero elements

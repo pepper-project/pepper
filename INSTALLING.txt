@@ -1,0 +1,156 @@
+Installing pepper dependencies
+---
+
+= Tools
+    Most distributions will have these tools available as binary packages.
+
+    1. python 2.x
+        Make sure to install the development package, e.g., python-dev on debian
+    2. java >= 1.7
+    3. go >= 1.0.2
+        http://golang.org/doc/install/source
+    4. gcc, g++
+        You will need g++ version 4.7.3 or later for C++11 support.
+    5. Apache ant
+    6. NVidia CUDA SDK (if you want to use the experimental GPU code)
+    7. GNU Make
+    8. GNU time
+    9. Boost
+    10. MySQL (for baseline measurements vs. Pantry database operations)
+
+= Packages.
+    We have archived known-working versions of these packages at
+    https://github.com/pepper-project/thirdparty
+    The most up-to-date versions should also work.
+
+    When you've finished installing all of these, you should run
+            sudo ldconfig
+    for good measure.
+
+    1. gmp
+        https://gmplib.org
+        Most linux distributions have a binary gmp distribution available. Be
+        sure to install the development package (i.e., the one that includes
+        header files in addition to the libraries).
+
+        If you need to build libgmp from source, obtain and unpack the gmp
+        tarball and cd to the resulting directory, then:
+
+            ./configure --enable-cxx
+            make
+            sudo make install
+
+    2. PAPI
+        http://icl.cs.utk.edu/papi
+        Unpack the tarball and cd to the resulting directory, then:
+
+            ./configure
+            make
+            make test # optional
+            sudo make install
+            sudo make install-man
+
+    3. chacha-ref or chacha-fast
+        On 32-bit machines, use chacha-ref. On 64-bit machines, use chacha-fast.
+        Unpack chacha tarball and cd to the resulting directory, then
+
+            make
+            sudo make install
+
+    4. NTL
+        http://shoup.net/ntl/download.html
+        Unpack the tarball and cd into the resulting directory, then:
+
+            cd src
+            ./configure NTL_GMP_LIP=on
+            make
+            sudo make install
+
+    5. libconfig
+        http://www.hyperrealm.com/libconfig
+        Unpack the tarball and cd into the resulting directory, then:
+
+            ./configure
+            make
+            sudo make install
+            sudo ldconfig
+
+    6. Cheetah template library
+        http://www.cheetahtemplate.org/
+        Your linux distribution may have a 'python-dev' package available; you
+        should install this so that cheetah is able to compile the faster C
+        backend library.
+        Unpack the tarball and cd into the resulting directory, then:
+
+            python setup.py install
+
+    7. OpenMPI
+        Your linux distribution will likely have an OpenMPI package available.
+        Remember to install the development package, which includes header
+        files.
+
+    8. GMPMEE
+        Unpack the tarball and cd into the resulting directory, then:
+
+            make
+            sudo make install
+
+    9. OpenSSL
+        Your linux distribution will likely have OpenSSL packages available.
+        Remember to install the development package, which includes header
+        files.
+
+    10. fcgi
+        http://www.fastcgi.com/drupal/
+        Unpack the tarball and cd into the resulting directory, then:
+
+            ./configure
+            make
+            sudo make install
+
+    11. PBC
+        http://crypto.stanford.edu/pbc/
+        Unpack the tarball and cd into the resulting directory, then:
+
+            ./configure LDFLAGS="-lgmp"
+            make
+            sudo make install
+
+    12. Kyoto Cabinet
+        http://fallabs.com/kyotocabinet/api
+        Unpack the tarball and cd into the resulting directory, then:
+
+            ./configure
+            make
+            sudo make install
+
+    13. LevelDB
+        http://code.google.com/p/leveldb/downloads/list
+        Unpack the tarball and cd into the resulting directory, then:
+
+            make
+            make check
+            sudo mkdir -p /usr/local/include/leveldb
+            sudo cp include/leveldb/* /usr/local/include/leveldb
+            sudo cp -d libleveldb.* /usr/local/lib
+            sudo ldconfig
+
+    14. libzm - xbyak
+
+            git clone https://github.com/herumi/xbyak.git
+            cd xbyak
+            make
+            make install
+
+    15. libzm - ate-pairing
+
+            git clone https://github.com/herumi/ate-pairing.git
+            cd ate-pairing
+            make
+            sudo mkdir /usr/local/lib/libzm
+            sudo cp lib/libzm.a /usr/local/lib/libzm
+            sudo mkdir /usr/local/include/libzm
+            sudo cp include/* /usr/local/include/libzm
+
+    16. LLVM/Clang with BuffetFSM patches
+        See code/compiler/buffetfsm/README.md

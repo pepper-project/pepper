@@ -4,7 +4,7 @@
 #
 #	Recursive Make Considered Harmful
 #	http://aegis.sourceforge.net/auug97.pdf
-#
+
 OBJDIR := obj
 BINDIR := bin
 PTXDIR := ptx
@@ -12,6 +12,7 @@ LIBDIR := lib
 GENSRCDIR := apps_sfdl_gen
 HWSRCDIR := apps_sfdl_hw
 
+LSDIR := ../libsnark
 include flags
 
 TOP = .
@@ -42,9 +43,14 @@ PYTHON := python2
 
 CHECKER := $(PYTHON) cpplint.py --verbose 5 
 
+
 # Compiler flags
 CFLAGS := $(CFLAGS) -I$(TOP) -I$(TOP)/include -MD -m64 
-CFLAGS += -Wall -Wno-format -Wno-unused -fopenmp -O2
+CFLAGS += -std=c++0x  -Wall -Wno-format -Wno-unused -fopenmp -O2 
+
+ifeq ($(USE_LIBSNARK),1)
+CFLAGS += -DCURVE_BN128 -I$(LSDIR)/src -I$(LSDIR)/depsrc/ate-pairing/include -DBN_SUPPORT_SNARK -DBINARY_OUTPUT -DUSE_LIBSNARK
+endif
 
 # temporary directory
 CFLAGS += -DFOLDER_STATE=\"/tmp/$(USER)/computation_state\"
@@ -88,7 +94,15 @@ CFLAGS += -DFAST_RAM_ADDRESS_WIDTH=$(FAST_RAM_ADDRESS_WIDTH)
 
 # Common linker flags
 LDFLAGS := -L/usr/local/lib -lm -lgmp -lgmpxx -lgomp -lconfig++ -lgmpmee -lntl -lrt -lfcgi -lpbc -lkyotocabinet
-LDFLAGS += -L/usr/local/lib/chacha -lchacha -lpapi -lleveldb -L/usr/local/lib/libzm -lzm
+LDFLAGS += -L/usr/local/lib/chacha -lchacha -lpapi -lleveldb
+
+ifeq ($(USE_LIBSNARK),1)
+LDFLAGS += -L $(LSDIR) -lsnark
+LDFLAGS += -L$(LSDIR)/depinst/lib -lzm
+else
+LDFLAGS += -L/usr/local/lib/libzm -lzm
+endif
+
 ifeq ($(BUILD_MYSQL_MICRO), 1)
 LDFLAGS += -L/usr/local/mysql/lib -lmysqlclient
 endif
@@ -100,7 +114,9 @@ IFLAGS := -I/usr/include -I/usr/local/include -pthread
 IFLAGS += -I/usr/local/include/chacha
 IFLAGS += -I/usr/local/include/pbc
 #IFLAGS += -I/usr/local/BerkeleyDB.6.0/include
-IFLAGS += -I/usr/local/include/libzm
+ifneq ($(USE_LIBSNARK),1)
+	IFLAGS += -I/usr/local/include/libzm
+endif
 
 ifeq ($(BUILD_MYSQL_MICRO), 1)
 IFLAGS += -I/usr/local/mysql/include/
@@ -150,6 +166,7 @@ include include/Makefrag
 include misc/Makefrag
 include net/Makefrag
 include apps_tailored/Makefrag
+
 ifeq ($(USE_GPU), 1)
 include lib_gpu/Makefrag
 include lib_gpu_tests/Makefrag
@@ -266,7 +283,7 @@ $(BINDIR)/%: $(OBJDIR)/%.o
 	@echo + mk $@
 	@mkdir -p $(@D)
 	$(V)$(CPP) $(CFLAGS) $(IFLAGS) $(CUDA_IFLAGS) -o $@ $^ $(LDFLAGS) $(CUDA_LDFLAGS)
-	
+
 # For running binaries.
 run-%: $(BINDIR)/%
 	./$(BINDIR)/$*
@@ -286,7 +303,7 @@ clean: clean-gensrc
 
 clean-gensrc: 
 	rm -rf $(GENSRCDIR)
-	
+
 # This magic automatically generates makefile dependencies
 # for header files included from C source files we compile,
 # and keeps those dependencies up-to-date every time we recompile.

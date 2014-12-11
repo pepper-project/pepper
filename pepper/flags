@@ -3,6 +3,9 @@
 #Uncomment if this system does not have cuda / nvcc installed
 USE_GPU = 0 
 
+#Uncomment to use libsnark library
+USE_LIBSNARK = 1
+
 #An option to constrain the maximum number of provers
 NUM_PROVERS_MAX := 60
 
