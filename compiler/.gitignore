@@ -4,6 +4,7 @@ frontend/temp/*
 *.defines
 tmptime
 *tmp*
+!*.tmpl
 *.circuit*
 *.spec
 *.cons
