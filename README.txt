@@ -37,7 +37,7 @@ I. Installation and first steps
 II. Configuration
 
   - To select different verifiable computation protocols (Zaatar,
-    Ginger, Pinocchio, etc.), please see common/utility.h.
+    Ginger, Pinocchio, etc.), please see pepper/common/utility.h.
     Note that when USE_LIBSNARK=1 is set in pepper/flags, the
     correct backend is selected automatically.
   
