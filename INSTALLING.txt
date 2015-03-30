@@ -2,155 +2,147 @@ Installing pepper dependencies
 ---
 
 = Tools
-    Most distributions will have these tools available as binary packages.
+    Your distribution will likely have these as binary packages.
 
-    1. python 2.x
-        Make sure to install the development package, e.g., python-dev on debian
-    2. java >= 1.7
-    3. go >= 1.0.2
-        http://golang.org/doc/install/source
-    4. gcc, g++
-        You will need g++ version 4.7.3 or later for C++11 support.
-    5. Apache ant
-    6. NVidia CUDA SDK (if you want to use the experimental GPU code)
-    7. GNU Make
-    8. GNU time
-    9. Boost
-    10. MySQL (for baseline measurements vs. Pantry database operations)
+    Tested with Debian (Wheezy and Jessie), Fedora 21, Arch 2015.03ish.
+
+Debian:
+--
+  Ubuntu should be largely similar if not identical.
+
+    apt-get install python2.7 libpython2.7 libpython2.7-dev openjdk-7-jdk \\
+            golang build-essential gcc g++ gcc-multilib g++-multilib ant  \\
+            ant-optional make time libboost-all-dev libgmp10 libgmp-dev   \\
+            zlib1g zlib1g-dev openmpi-bin openmpi-common libopenmpi-dev
+
+Fedora:
+--
+  CentOS should be largely similar, assuming a sufficiently up-to-date release.
+
+    yum install python python-devel java-1.8.0-openjdk-devel golang gcc   \\
+        gcc-c++ glibc-devel.i686 libstdc++.i686 ant make time boost       \\
+        boost-devel gmp gmp-devel zlib zlib-devel openmpi openmpi-devel
+
+  **IMPORTANT: on Fedora, you need to take a few more steps to use openmpi.
+  You will need to set up your environment this way every time you want
+  to run a Pepper computation!
+
+    source /etc/profile.d/modules.sh
+    module load mpi/openmpi-x86_64
+
+Arch: 
+--
+  First, you need to enable multilib. See https://wiki.archlinux.org/index.php/multilib
+
+    pacman -S python2 jdk7-openjdk go base-devel multilib-devel           \\
+           libstdc++5 lib32-glibc lib32-libstdc++5 lib32-gcc-libs         \\
+           gcc-libs-multilib libtool-multilib gcc-multilib apache-ant     \\
+           make time boost boost-libs gmp zlib openmpi
+    ln -sf /usr/bin/python2 /usr/bin/python
+    ln -sf /usr/bin/python2-config /usr/bin/python-config
+
+  Note that this will change `python` from python3 (Arch default) to python2. Sorry...
+
+
+Other distributions:
+--
+For more details, see the end of this file.
+
+
 
 = Packages.
     We have archived known-working versions of these packages at
     https://github.com/pepper-project/thirdparty
-    The most up-to-date versions should also work.
+    along with an install script.
+
+    Please check out this repo and run the install script after
+    installing the packages listed in Tools, above.
 
     When you've finished installing all of these, you should run
             sudo ldconfig
     for good measure.
 
-    1. gmp
-        https://gmplib.org
-        Most linux distributions have a binary gmp distribution available. Be
-        sure to install the development package (i.e., the one that includes
-        header files in addition to the libraries).
+    Finally, you will need to build LLVM/Clang with the BuffetFSM patches.
+    See code/compiler/buffetfsm/README.md for more information.
 
-        If you need to build libgmp from source, obtain and unpack the gmp
-        tarball and cd to the resulting directory, then:
 
-            ./configure --enable-cxx
-            make
-            sudo make install
 
-    2. PAPI
-        http://icl.cs.utk.edu/papi
-        Unpack the tarball and cd to the resulting directory, then:
+= More details (hints for other distributions)
 
-            ./configure
-            make
-            make test # optional
-            sudo make install
-            sudo make install-man
+    1.  python 2.x
+          Debian: apt-get install python2.7 libpython2.7 libpython2.7-dev
+          Fedora: yum install python python-devel
+          Arch: pacman -S python2
+                ln -sf /usr/bin/python2 /usr/bin/python
+                ln -sf /usr/bin/python2-config /usr/bin/python-config
 
-    3. chacha-ref or chacha-fast
-        On 32-bit machines, use chacha-ref. On 64-bit machines, use chacha-fast.
-        Unpack chacha tarball and cd to the resulting directory, then
+    2.  java >= 1.7
+          Debian: apt-get install openjdk-7-jdk
+          Fedora: yum install java-1.8.0-openjdk-devel
+          Arch: pacman -S jdk7-openjdk
 
-            make
-            sudo make install
+    3.  go >= 1.0.2
+          Debian: apt-get install golang
+          Fedora: yum install golang
+          Arch: pacman -S go
 
-    4. NTL
-        http://shoup.net/ntl/download.html
-        Unpack the tarball and cd into the resulting directory, then:
+    4.  gcc, g++ >= 4.7.3 (including multilib support)
+          Debian: apt-get install gcc g++ gcc-multilib g++-multilib
+          Fedora: yum install gcc gcc-c++ glibc-devel.i686 libstdc++.i686
+          Arch: pacman -S base-devel multilib-devel libstdc++5 lib32-glibc lib32-libstdc++5 lib32-gcc-libs gcc-libs-multilib libtool-multilib gcc-multilib
 
-            cd src
-            ./configure NTL_GMP_LIP=on
-            make
-            sudo make install
+    5.  Apache ant
+          Debian: apt-get install ant ant-optional
+          Fedora: yum install ant
+          Arch: pacman -S apache-ant
 
-    5. libconfig
-        http://www.hyperrealm.com/libconfig
-        Unpack the tarball and cd into the resulting directory, then:
+    7.  GNU Make
+          Debian: apt-get install make
+          Fedora: yum install make
+          Arch: pacman -S make
 
-            ./configure
-            make
-            sudo make install
-            sudo ldconfig
+    8.  GNU time
+          Debian: apt-get install time
+          Fedora: yum install time
+          Arch: pacman -S time
 
-    6. Cheetah template library
-        http://www.cheetahtemplate.org/
-        Your linux distribution may have a 'python-dev' package available; you
-        should install this so that cheetah is able to compile the faster C
-        backend library.
-        Unpack the tarball and cd into the resulting directory, then:
+    9.  Boost
+          Debian: apt-get install libboost-all-dev
+          Fedora: yum install boost boost-devel
+          Arch: pacman -S boost boost-libs
 
-            python setup.py install
+    10. gmp (including development libraries)
+          Debian: apt-get install libgmp10 libgmp-dev
+          Fedora: yum install gmp gmp-devel
+          Arch: pacman -S gmp
 
-    7. OpenMPI
-        Your linux distribution will likely have an OpenMPI package available.
-        Remember to install the development package, which includes header
-        files.
+    11. zlib
+          Debian: apt-get install zlib1g zlib1g-dev
+          Fedora: yum install zlib zlib-devel
+          Arch: pacman -S zlib
 
-    8. GMPMEE
-        Unpack the tarball and cd into the resulting directory, then:
+    12. MPI
+          Debian: apt-get install openmpi-bin openmpi-common libopenmpi-dev
+          Fedora: yum install openmpi openmpi-devel
+          Arch: pacman -S openmpi
 
-            make
-            sudo make install
+    **IMPORTANT: on Fedora, you need to take a few more steps to use openmpi.
+    You will need to set up your environment this way every time you want
+    to run a Pepper computation!
 
-    9. OpenSSL
-        Your linux distribution will likely have OpenSSL packages available.
-        Remember to install the development package, which includes header
-        files.
+          source /etc/profile.d/modules.sh
+          module load mpi/openmpi-x86_64
 
-    10. fcgi
-        http://www.fastcgi.com/drupal/
-        Unpack the tarball and cd into the resulting directory, then:
+  Optional:
+    1.  MySQL
+            (for baseline measurements vs. Pantry database operations)
 
-            ./configure
-            make
-            sudo make install
+    2.  NVidia CUDA SDK
+            (if you want to use the experimental GPU code,
+             currently undocumented, and somewhat neglected)
 
-    11. PBC
-        http://crypto.stanford.edu/pbc/
-        Unpack the tarball and cd into the resulting directory, then:
+    3.  subversion
+            (if you want to check out a later version of clang
+             for use with the BuffetFSM compiler; this is unsupported)
 
-            ./configure LDFLAGS="-lgmp"
-            make
-            sudo make install
 
-    12. Kyoto Cabinet
-        http://fallabs.com/kyotocabinet/api
-        Unpack the tarball and cd into the resulting directory, then:
-
-            ./configure
-            make
-            sudo make install
-
-    13. LevelDB
-        http://code.google.com/p/leveldb/downloads/list
-        Unpack the tarball and cd into the resulting directory, then:
-
-            make
-            make check
-            sudo mkdir -p /usr/local/include/leveldb
-            sudo cp include/leveldb/* /usr/local/include/leveldb
-            sudo cp -d libleveldb.* /usr/local/lib
-            sudo ldconfig
-
-    14. libzm - xbyak
-
-            git clone https://github.com/herumi/xbyak.git
-            cd xbyak
-            make
-            make install
-
-    15. libzm - ate-pairing
-
-            git clone https://github.com/herumi/ate-pairing.git
-            cd ate-pairing
-            make
-            sudo mkdir /usr/local/lib/libzm
-            sudo cp lib/libzm.a /usr/local/lib/libzm
-            sudo mkdir /usr/local/include/libzm
-            sudo cp include/* /usr/local/include/libzm
-
-    16. LLVM/Clang with BuffetFSM patches
-        See code/compiler/buffetfsm/README.md

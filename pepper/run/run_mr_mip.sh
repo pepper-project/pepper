@@ -4,6 +4,7 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
+export LD_LIBRARY_PATH=${HOME}/pepper_deps/lib:${LD_LIBRARY_PATH}
 comp=$1
 shift
 
@@ -26,6 +27,8 @@ size_input_map=`grep "#define SIZE_INPUT" apps_sfdl/${comp}_map.c | awk '{print 
 #echo "-----------------------------------------------------"
 #echo "LOG: Running the reducer batch $1_red"
 #mpirun -np 2 ./bin/$1_red -b $num_red
+
+
 
 echo "LOG: Starting MapReduce computation: ${comp}."
 mpirun -np 3 "./bin/mip/apps/${comp}_mip" $@ -s "${comp}" "bin/${comp}" ${num_map} ${num_red}

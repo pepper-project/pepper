@@ -10,6 +10,8 @@ import collections
 import var_table
 import merkle
 
+import wak
+
 verbose = 1
 
 INPUT_TAG = "INPUT"
@@ -200,17 +202,17 @@ def generate_memory_consistency_in_spec(spec_file):
     #print "rounded width: ", rounded_width
 
     global mem_timestamp
-    while width < rounded_width:
+    """ while width < rounded_width:
       # pad with store 0 at addr 0. This should have no effect on actual memory operations.
       # TODO confirm this.
       mem_ops_input += ["0", str(mem_timestamp), str(NO_OP), "0", "1", "true", "0"]
       width += 1
       mem_timestamp += 1
-
+    """
     #print "width: ", width
 
     depth = 2 * int(math.log(width, 2)) - 1
-    memory_consistency = "MEM_CONSISTENCY WORD_WIDTH %d WIDTH %d DEPTH %d INPUT %s\n" % (address_width, width, depth, " ".join(mem_ops_input))
+    memory_consistency = "MEM_CONSISTENCY WORD_WIDTH %d WIDTH %d INPUT %s\n" % (address_width, width, " ".join(mem_ops_input))
     new_spec_file.write(memory_consistency)
 
   new_spec_file.write(END_TAG + CONSTRAINTS_TAG + "\n")
@@ -740,123 +742,122 @@ def split_unsignedint_as_basic_constraints(terms):
 
   return toRet
 
-def generate_benes_network_variable_names(address_width, width, depth, input):
-  # allocate variables here.
+def generate_waksman_network_variable_names(width):
 
-  # expand all intermediate nodes. <num_elements_in_mem_op_tuple * width * (depth - 1)> of them.
-  intermediate_nodes = []
-  for i in range(width):
-    for j in range(depth - 1):
-      intermediate_nodes.append("benes$r%s$c%s$addr" % (i, j))
-      intermediate_nodes.append("benes$r%s$c%s$ts" % (i, j))
-      intermediate_nodes.append("benes$r%s$c%s$type" % (i, j))
-      intermediate_nodes.append("benes$r%s$c%s$value" % (i, j))
-  #print intermediate_nodes
-
-  # expand output variables. <num_elements_in_mem_op_tuple * width> of them
-  output = []
-  for i in range(width):
-    #output.append("V%s" % (output_start + i))
-    output.append("benes$output$%s$addr" % (i))
-    output.append("benes$output$%s$ts" % (i))
-    output.append("benes$output$%s$type" % (i))
-    output.append("benes$output$%s$value" % (i))
-  #print output
-
-  # expand switch variables. <width * depth / 2> of them.
+  network = wak.waksman(width)
   switches = []
-  for i in range(width / 2):
-    for j in range(depth):
-      switches.append("benes$switch$r%s$c%s" % (i, j))
-  #print switches
+  intermediate_nodes = []
+  outputs = []
+  num_switches = 0
+  for i in range(1, width+1):
+    num_switches += int(math.ceil(math.log(i,2)))
+  num_intermediate = num_switches * 2 - width
 
-  return (intermediate_nodes, output, switches)
+  for i in range(num_switches):
+    switches.append("Tsw%d" % (i))
+  for i in range(0, len(network), 2):
+    (s1, s2, t1, t2, sw) = wak.parseNet(network[i], network[i+1])
+    
+    if (s1[0] == 'V'):
+      intermediate_nodes.append(s1 + 'addr')
+      intermediate_nodes.append(s1 +'ts' )
+      intermediate_nodes.append(s1 +'type')
+      intermediate_nodes.append(s1 +'value')
+    if (s2[0] == 'V'):
+      intermediate_nodes.append(s2 + 'addr')
+      intermediate_nodes.append(s2 +'ts' )
+      intermediate_nodes.append(s2 +'type')
+      intermediate_nodes.append(s2 +'value') 
+    if (t1[0] == 'O'):
+      outputs.append(t1 + 'addr')
+      outputs.append(t1 + 'ts')
+      outputs.append(t1 + 'type')
+      outputs.append(t1 + 'value')
+    else:
+      intermediate_nodes.append(t1 + 'addr')
+      intermediate_nodes.append(t1 +'ts' )
+      intermediate_nodes.append(t1 +'type')
+      intermediate_nodes.append(t1 +'value') 
+    if (t2[0] == 'O'):
+      outputs.append(t2 + 'addr')
+      outputs.append(t2 + 'ts')
+      outputs.append(t2 + 'type')
+      outputs.append(t2 + 'value')
+    else:
+      intermediate_nodes.append(t2 + 'addr')
+      intermediate_nodes.append(t2 +'ts' )
+      intermediate_nodes.append(t2 +'type')
+      intermediate_nodes.append(t2 +'value') 
+   
+#Note: it doesn't actually matter if there are duplicate names, they only get added to the vartable once.
+#  assert(len(intermediate_nodes) == 4*num_intermediate) 
+  #print intermediate_nodes
+  #print outputs
+#  print switches
 
-# Not sure if I can have something like ( 1 - 1 ) * 1 in basic constraints?
-# Answer: yes, I can!
-def benes_network_as_basic_constraints(address_width, width, depth, input):
-  #toRet = []
+  return (intermediate_nodes, outputs, switches)
 
-  (intermediate_nodes, output, switches) = generate_benes_network_variable_names(address_width, width, depth, input)
-  # a list of all nodes.
-  nodes = input + intermediate_nodes + output
-  #print nodes
+def waksman_network_as_basic_constraints(address_width, width, input):
 
-  def gen_benes_network_basic_constraints(width, nodes):
-    # expand benes network constraints
-    # depth * width / 2 groups of constraints to be generated.
+  outputs = []
+  constraints = []
+  network = wak.waksman(width)
+  #print input
+  vartypes = ['addr', 'ts', 'type', 'value']
+  for i in range(width):
+    outputs.append('O%daddr' % i)
+    outputs.append('O%dts' % i)
+    outputs.append('O%dtype' % i)
+    outputs.append('O%dvalue' % i)
+    
+  def gen_waksman(width, network):
+    for i in range(0, len(network), 2):
+      (s1, s2, t1, t2, sw) = wak.parseNet(network[i], network[i+1])
+      for k in range(num_elements_in_mem_op_tuple):
 
-    # for each group, there are 8 constraints.
-    switch_index = 0
+        if (s1[0] == 'I'):
+          source_index1 = input[int(s1[1:]) * num_elements_in_mem_op_tuple  + k]
+        else:
+          source_index1 = s1+vartypes[k]
+          if (s2[0] == 'I'):
+            source_index2 = input[int(s2[1:]) * num_elements_in_mem_op_tuple  + k]
+          else:
+            source_index2 = s2+vartypes[k]
+            
+            target_index = t1 + vartypes[k]
+            sw_index = sw
 
-    log_width = int(math.log(width, 2))
+            constraint = "( %s - %s ) * ( %s ) + ( %s - %s )" % (
+              source_index2,
+              source_index1,
+              sw_index,
+              source_index1,
+              target_index)
+     # print constraint
+            yield constraint
+            source_index1, source_index2 = source_index2, source_index1
+            target_index = t2 + vartypes[k]
+            constraint = "( %s - %s ) * ( %s ) + ( %s - %s )" % (
+              source_index2,
+              source_index1,
+              sw_index,
+              source_index1,
+              target_index)
+      #print constraint
+            yield constraint
 
-    for i in switches:
-      constraint = "( 1 - %s ) * ( %s ) + ( 0 - 0 )" % ( i , i )
-      yield constraint
+            constraint = "( 1 - %s ) * ( %s ) + ( 0 - 0 )" % ( sw_index , sw_index )
+   # print constraint
+            yield constraint
 
-    # the first half of the butterfly network
-    for i in range(log_width):
-      gap_size = width >> (i + 1)
-      group_size = width >> i
-      switches_in_a_group = group_size / 2
-
-      for j in range(width):
-        group_id = j >> (log_width - i)
-        in_group_offset = j & (switches_in_a_group - 1)
-
-        target_index = (i + 1) * width + j
-        source_index1 = target_index - width
-        source_index2 = source_index1 ^ gap_size
-        switch_index = i * width / 2 + group_id * switches_in_a_group + in_group_offset
-
-        #print gap_size, group_size, group_id, in_group_offset, target_index, source_index1, source_index2, switch_index
-        for k in range(num_elements_in_mem_op_tuple):
-          constraint = "( %s - %s ) * ( %s ) + ( %s - %s )" % (
-              nodes[num_elements_in_mem_op_tuple * source_index2 + k],
-              nodes[num_elements_in_mem_op_tuple * source_index1 + k],
-              switches[switch_index],
-              nodes[num_elements_in_mem_op_tuple * source_index1 + k],
-              nodes[num_elements_in_mem_op_tuple * target_index + k])
-          #print constraint
-          yield constraint
-          #toRet.append(constraint)
-
-    # the second half of the butterfly network
-    for i in reversed(range(log_width - 1)):
-      gap_size = width >> (i + 1)
-      group_size = width >> i
-      switches_in_a_group = group_size / 2
-
-      for j in range(width):
-        group_id = j >> (log_width - i)
-        in_group_offset = j & (switches_in_a_group - 1)
-
-        target_index = (2 * log_width - i - 1) * width + j
-        source_index1 = target_index - width
-        source_index2 = source_index1 ^ gap_size
-        switch_index = (2 * log_width - i - 2) * width / 2 + group_id * switches_in_a_group + in_group_offset
-
-        #print gap_size, group_size, group_id, in_group_offset, target_index, source_index1, source_index2, switch_index
-        for k in range(num_elements_in_mem_op_tuple):
-          constraint = "( %s - %s ) * ( %s ) + ( %s - %s )" % (
-              nodes[num_elements_in_mem_op_tuple * source_index2 + k],
-              nodes[num_elements_in_mem_op_tuple * source_index1 + k],
-              switches[switch_index],
-              nodes[num_elements_in_mem_op_tuple * source_index1 + k],
-              nodes[num_elements_in_mem_op_tuple * target_index + k])
-          #print constraint
-          yield constraint
-          #toRet.append(constraint)
-
-  return (output, gen_benes_network_basic_constraints(width, nodes))
+  return (outputs, gen_waksman(width, network) )
 
 def generate_computation_first_mem_consistency(mem_op):
   def pv(name):
     return variables.read_var(name)
 
   op2 = dict()
-
+  
   op2["addr"] = mem_op[0]
   op2["ts"] = mem_op[1]
   op2["type"] = mem_op[2]
@@ -1033,20 +1034,14 @@ def parse_mem_consistency_spec_line(terms):
   width = int(terms[current_token])
   current_token = current_token + 1
 
-  assert terms[current_token] == "DEPTH"
-  current_token = current_token + 1
-
-  depth = int(terms[current_token])
-  current_token = current_token + 1
-
   assert terms[current_token] == "INPUT"
   current_token = current_token + 1
 
   input = list(terms)[current_token:(current_token + (num_elements_in_mem_op_tuple + 3) * width)] # <num_elements_in_mem_op_tuple * width> of them
 
-  return (address_width, width, depth, input)
+  return (address_width, width, input)
 
-def generate_computation_benes_network_actual_input(address_width, width, depth, input):
+def generate_computation_waksman_network_actual_input(address_width, width, input):
   def pv(name):
     return variables.read_var(name)
 
@@ -1101,21 +1096,22 @@ def generate_computation_benes_network_actual_input(address_width, width, depth,
 def mem_consistency_as_basic_constraints(terms):
   # separate terms to be input/intermediate nodes/output and switch flags.
 
-  (address_width, width, depth, input) = parse_mem_consistency_spec_line(terms)
+  (address_width, width, input) = parse_mem_consistency_spec_line(terms)
 
   # convert this to use generator to save memory
-  (computation, input) = generate_computation_benes_network_actual_input(address_width, width, depth, input)
+  (computation, input) = generate_computation_waksman_network_actual_input(address_width, width, input)
   for bc in to_basic_constraints_lines(computation):
     yield bc
 
   #print "input: ", input
   #print "actual_input: ", toRet
-
-  (output, constraints) = benes_network_as_basic_constraints(address_width, width, depth, input)
+  
+  
+  (output, constraints) = waksman_network_as_basic_constraints(address_width, width, input)
   #print "benes_network: ", cons
   for bc in constraints:
     yield bc
-
+  #print output
   # expand memory consistency constraints
 
   # first memory access need some extra care
@@ -1763,6 +1759,9 @@ def expand_polynomial_matrixrow(tokens):
   for term in expanded:
     numNonZeroTerms = numNonZeroTerms + 1
     expanded_list += [" * ".join(term)]
+ # print "TOKENS"
+#  print tokens
+ # print  expanded_list
   return (numNonZeroTerms, " + ".join(expanded_list))
 
 def generate_gamma0(spec_file):
@@ -2096,7 +2095,7 @@ def generate_computation_less_f(na2, nb2, arg0, arg1, target):
       DenVar, NDVar, MltVar, MeqVar, MgtVar,
       f(arg0), f(arg1), f(target))
 
-def generate_computation_benes_network(address_width, width, depth, input):
+def generate_computation_waksman_network(address_width, width, input):
   def pv(name):
     return variables.read_var(name)
 
@@ -2111,59 +2110,44 @@ def generate_computation_benes_network(address_width, width, depth, input):
   def f(varname):
     (_, renumbered_name) = to_var(varname)
     return renumbered_name
-
-  (intermediate_nodes, output, switches) = generate_benes_network_variable_names(address_width, width, depth, input)
-
+  
+  (intermediate_nodes, outputs, switches) = generate_waksman_network_variable_names(width)
+  
   addr = input[0]
   ts = input[1]
   type = input[2]
   value = input[3]
 
-  # addr should be of equal or less length of address_width
-  #assert (address_width >= to_var(addr)[0]["na"])
-  # value should be of equal or less length of word_width
-  #assert (word_width >= to_var(value)[0]["na"])
-  # type should be either 0 (store) or 1 (load)
-  #assert (1 == to_var(type)[0]["na"])
-
-  # register intermediate variables
   for node in intermediate_nodes:
-    # mess with intermediate variable types
-    #pv_type(node, input[i % num_elements_in_mem_op_tuple])
     pv(node)
-
-  i = 0;
-  # 0=>address 1=>timestamp 2=>op 3=>value
-  # address, timestamp, type, value
+  
+  #print intermediate_nodes
+  
   na_size = [address_width, 32, 2, word_width]
-  for node in output:
-    # mess with intermediate variable types
+  i = 0
+  for node in outputs:
     var = pv(node)
     var["type"] = "uint"
     var["na"] = na_size[i % 4]
     var["nb"] = 0
     i = i + 1
 
-  # all switches are 1 bit
   for node in switches:
     var = pv(node)
-    #var["type"] = "uint"
-    #var["na"] = 1
-    #var["nb"] = 0
-
-  line = "BENES_NETWORK WIDTH %s DEPTH %s INPUT" % (width, depth)
+ 
+  line = "WAKSMAN_NETWORK WIDTH %s INPUT" % (width)
 
   for node in input:
     line += " %s" % (f(node))
 
   # all variable names should be used here.
   if (len(intermediate_nodes) > 0):
-    line += " INTERMEDIATE %s OUTPUT %s SWITCH %s" % (f(intermediate_nodes[0]), f(output[0]), f(switches[0]))
+    line += " INTERMEDIATE %s OUTPUT %s SWITCH %s" % (f(intermediate_nodes[0]), f(outputs[0]), f(switches[0]))
   else:
-    line += " INTERMEDIATE NULL OUTPUT %s SWITCH %s" % (f(output[0]), f(switches[0]))
+    line += " INTERMEDIATE NULL OUTPUT %s SWITCH %s" % (f(outputs[0]), f(switches[0]))
   line += "\n"
 
-  return (line, output)
+  return (line, outputs)
 
 def generate_computation_exo_compute(terms, pws_file):
   (inVars, outVars, exoId) = parse_exo_compute_spec_line(terms)
@@ -2187,23 +2171,23 @@ def generate_computation_exo_compute(terms, pws_file):
   pws_file.write(" ".join(newLine) + "\n")
 
 def generate_computation_mem_consistency(terms, pws_file):
-  (address_width, width, depth, input) = parse_mem_consistency_spec_line(terms)
+  (address_width, width, input) = parse_mem_consistency_spec_line(terms)
   # expand constraints to compute the actual input to the benes network.
   # replace RAM operations on non-executed with "no-op".
 
-  computation, input = generate_computation_benes_network_actual_input(address_width, width, depth, input)
+  computation, input = generate_computation_waksman_network_actual_input(address_width, width, input)
   generate_computation_lines(computation, pws_file)
 
   #print input
 
   # expand the spec line to Benes network pseudo constraint and memory
   # consistency constraints
-  computation, output = generate_computation_benes_network(address_width, width, depth, input)
+  computation, output = generate_computation_waksman_network(address_width, width, input)
   pws_file.write(computation)
 
   computation = generate_computation_first_mem_consistency(output[:num_elements_in_mem_op_tuple])
   generate_computation_lines(computation, pws_file)
-
+  #print len(output)
   for i in range(width - 1):
     # all variables used here are names
     computation = generate_computation_pairwise_mem_consistency(output[num_elements_in_mem_op_tuple * i:num_elements_in_mem_op_tuple * (i + 2)])

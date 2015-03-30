@@ -67,6 +67,7 @@ class ComputationProver : public Prover {
     void parse_hash(FILE* pws_file, HashBlockStore::Key& outKey, int numHashBits);
     void compute_matrix_vec_mul(FILE* pws_file);
     void compute_benes_network(FILE* pws_file);
+    void compute_waksman_network(FILE* pws_file);
     void compute_get_block_by_hash(FILE* pws_file);
     void compute_put_block_by_hash(FILE* pws_file);
     void compute_free_block_by_hash(FILE* pws_file);

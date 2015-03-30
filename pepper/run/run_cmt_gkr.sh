@@ -3,6 +3,7 @@
 rsltdir=cmt_gkr_dat
 cpu=yes
 gpu=yes
+export LD_LIBRARY_PATH=${HOME}/pepper_deps/lib:${LD_LIBRARY_PATH}
 
 if [ $# -gt 0 ]
 then

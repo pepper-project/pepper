@@ -24,7 +24,7 @@ COMMON_SRCFILES :=          \
     common/poly_utils.cpp    \
     common/memory.cpp \
     common/handler.cpp \
-    common/benes_router.cpp \
+    common/waksman_router.cpp \
 
 # Only build files if they exist.
 COMMON_SRCFILES := $(wildcard $(COMMON_SRCFILES))

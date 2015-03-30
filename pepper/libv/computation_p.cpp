@@ -3,7 +3,8 @@
 #include <storage/configurable_block_store.h>
 #include <storage/gghA.h>
 #include <storage/ram_impl.h>
-#include <common/benes_router.h>
+
+#include <common/waksman_router.h>
 
 // rsw added for exo_compute
 #include <cstdlib>
@@ -13,6 +14,7 @@
 #include <sstream>
 #include <iterator>
 #include <unistd.h>
+#include <math.h>
 
 #include <string>
 #include <boost/unordered_map.hpp>
@@ -1069,24 +1071,24 @@ void ComputationProver::compute_matrix_vec_mul(FILE* pws_file) {
   clear_del_vec(input, actual_number_of_columns);
   clear_del_vec(result, number_of_rows);
 }
-
-void ComputationProver::compute_benes_network(FILE* pws_file) {
+void ComputationProver::compute_waksman_network(FILE* pws_file) {
   char cmds[BUFLEN];
 
-  expect_next_token(pws_file, "WIDTH", "Invalid BENES_NETWORK, WIDTH exected.");
+  expect_next_token(pws_file, "WIDTH", "Invalid WAKSMAN_NETWORK, WIDTH expected.");
   next_token_or_error(pws_file, cmds);
   int width = atoi(cmds);
-
-  expect_next_token(pws_file, "DEPTH", "Invalid BENES_NETWORK, DEPTH expected.");
-  next_token_or_error(pws_file, cmds);
-  int depth = atoi(cmds);
-
-  expect_next_token(pws_file, "INPUT", "Invalid BENES_NETWORK, INPUT expected.");
-
-  data_t* input =  new data_t[width];
-  data_t* intermediate = new data_t[width * (depth - 1)];
+  
+  expect_next_token(pws_file, "INPUT", "WAKSMAN_NETWORK, INPUT expected.");
+  int num_switches = 0;
+  for (int i = 1; i <= width; i++) {
+    num_switches += ceil(log2(i));
+   }
+  int num_intermediate = num_switches * 2 - width;
+  //cout << num_switches << endl;
+  data_t* input = new data_t[width];
+  data_t* intermediate = new data_t[num_intermediate];
   data_t* output =  new data_t[width];
-  switch_t* switches = new switch_t[width / 2 * depth];
+  switch_t* switches = new switch_t[num_switches];
 
   const int num_elements = 4;
 
@@ -1100,56 +1102,63 @@ void ComputationProver::compute_benes_network(FILE* pws_file) {
     input[i].type = mpz_get_si(mpq_numref(voc(cmds, temp_q)));
     next_token_or_error(pws_file, cmds);
     input[i].value = mpz_get_si(mpq_numref(voc(cmds, temp_q)));
-    //gmp_printf("%d ", input[i].addr);
+    //    gmp_printf("%d ", input[i].addr);
     //gmp_printf("%d ", input[i].timestamp);
     //gmp_printf("%d ", input[i].type);
     //gmp_printf("%d\n", input[i].value);
   }
+  
+  wak_route(input, intermediate, output, switches, width, num_switches);
 
-  // compute the actual benes network here.
-
-  do_route(input, intermediate, output, switches, width, depth);
-
-  // assign the results to corresponding entries in proof vector
-
-  expect_next_token(pws_file, "INTERMEDIATE", "Invalid BENES_NETWORK, INTERMEDIATE expected.");
+  expect_next_token(pws_file, "INTERMEDIATE", "Invalid WAKSMAN_NETWORK, INTERMEDIATE expected.");
   next_token_or_error(pws_file, cmds);
   if (strcmp(cmds, "NULL") != 0) {
     int intermediate_offset = atoi(cmds+1);
-
-    for (int i = 0; i < width * (depth - 1); i++) {
+    
+    for (int i = 0; i < num_intermediate; i++) {
       mpq_set_si(F1_q[F1_index[intermediate_offset + i * num_elements + 0]], intermediate[i].addr, 1);
       mpq_set_si(F1_q[F1_index[intermediate_offset + i * num_elements + 1]], intermediate[i].timestamp, 1);
       mpq_set_si(F1_q[F1_index[intermediate_offset + i * num_elements + 2]], intermediate[i].type, 1);
       mpq_set_si(F1_q[F1_index[intermediate_offset + i * num_elements + 3]], intermediate[i].value, 1);
+      
+      //  gmp_printf("%d ", intermediate[i].addr);
+      // gmp_printf("%d ", intermediate[i].timestamp);
+      // gmp_printf("%d ", intermediate[i].type);
+      // gmp_printf("%d\n", intermediate[i].value);
     }
   }
 
-  expect_next_token(pws_file, "OUTPUT", "Invalid BENES_NETWORK, OUTPUT expected.");
+  expect_next_token(pws_file, "OUTPUT", "Invalid WAKSMAN_NETWORK, OUTPUT expected.");
   next_token_or_error(pws_file, cmds);
   int output_offset = atoi(cmds+1);
+
   for (int i = 0; i < width; i++) {
     mpq_set_si(F1_q[F1_index[output_offset + i * num_elements + 0]], output[i].addr, 1);
     mpq_set_si(F1_q[F1_index[output_offset + i * num_elements + 1]], output[i].timestamp, 1);
     mpq_set_si(F1_q[F1_index[output_offset + i * num_elements + 2]], output[i].type, 1);
     mpq_set_si(F1_q[F1_index[output_offset + i * num_elements + 3]], output[i].value, 1);
-    //gmp_printf("%d ", output[i].addr);
-    //gmp_printf("%d ", output[i].timestamp);
-    //gmp_printf("%d ", output[i].type);
-    //gmp_printf("%d\n", output[i].value);
+    
+    // gmp_printf("%d ", output[i].addr);
+    // gmp_printf("%d ", output[i].timestamp);
+    // gmp_printf("%d ", output[i].type);
+    // gmp_printf("%d\n", output[i].value);
   }
 
   expect_next_token(pws_file, "SWITCH", "Invalid BENES_NETWORK, SWITCH expected.");
   next_token_or_error(pws_file, cmds);
+
   int switches_offset = atoi(cmds+1);
-  for (int i = 0; i < width / 2 * depth; i++) {
+  for (int i = 0; i < num_switches; i++) {
     if (switches[i].swap) {
       mpq_set_si(F1_q[F1_index[switches_offset + i]], 1, 1);
     } else {
       mpq_set_si(F1_q[F1_index[switches_offset + i]], 0, 1);
     }
-  }
+    
+    //    gmp_printf("%d\n", switches[i].swap);
+  }  
 }
+
 
 /**
   The computation may elect to simply execute a PWS file (prover work sheet).
@@ -1266,7 +1275,9 @@ void ComputationProver::compute_from_pws(const char* pws_filename) {
     } else if (strcmp(tok, "RAMPUT_FAST") == 0) {
       compute_fast_ramput(pws_file);
     } else if (strcmp(tok, "BENES_NETWORK") == 0) {
-      compute_benes_network(pws_file);
+      //compute_benes_network(pws_file);
+    } else if (strcmp(tok, "WAKSMAN_NETWORK") == 0) {
+      compute_waksman_network(pws_file);
     } else if (strcmp(tok, "EXO_COMPUTE") == 0) {
       compute_exo_compute(pws_file);
     } else {

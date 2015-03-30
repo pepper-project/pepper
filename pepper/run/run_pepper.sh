@@ -7,6 +7,8 @@ fi
 SRC_FILE=$1
 GENERATE_STATES="--gen-states 1"
 SHARED_BSTORE_PATH="default_shared_db"
+export LD_LIBRARY_PATH=${HOME}/pepper_deps/lib:${LD_LIBRARY_PATH}
+
 
 echo "LOG: Building executables"
 make SFDL_FILES="" C_FILES="$SRC_FILE" BUILD_CMT=0 BUILD_MIP=0
@@ -38,6 +40,7 @@ elif [ "$GENERATE_STATES" == "--gen-states 0" ]; then
 fi
 SHARED_BSTORE_PATH_FLAG="--shared-bstore-path $SHARED_BSTORE_PATH"
 echo "LOG: Using shared store named $SHARED_BSTORE_PATH"
+
 
 ./run/prepare.sh $PRESERVE_INPUT
 mpirun -np 2 ./bin/$SRC_FILE -p 1 -b 1 -r 1 -i 10 -v 0 $GENERATE_STATES $SHARED_BSTORE_PATH_FLAG

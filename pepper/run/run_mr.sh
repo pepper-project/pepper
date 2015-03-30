@@ -4,6 +4,8 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
+export LD_LIBRARY_PATH=${HOME}/pepper_deps/lib:${LD_LIBRARY_PATH}
+
 echo "LOG: Building executables"
 make SFDL_FILES="" C_FILES="$1_map $1_red" BUILD_MIP=0 BUILD_CMT=0 
 

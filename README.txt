@@ -54,11 +54,11 @@ II. Configuration
 
 III. What is new in this version?
 
-  (1) Integrated the libsnark backend from https://github.com/scipr-lab/libsnark
+  (1) Switched memory routing network from Benes to Waksman
+      - this should give better performance, especially for
+        programs with non-power-of-two memory accesses
 
-  (2) Update to the C-to-constraints compiler's memory optimization routines
-
-  (3) General bug fixes
+  (2) Updated installation instructions for prerequisites.
 
 IV. Contact
 Please contact

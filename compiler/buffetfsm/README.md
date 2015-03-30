@@ -20,7 +20,7 @@ README file.
 
 ### Step 1, Option 1: Use the provided tarball ###
 
-    tar xzvf ../../thirdparty/llvm_clang-r209914-buffet_fsm_patch.tar.gz
+    tar xjvf ../../../thirdparty/llvm_clang-r209914-buffet_fsm_patch.tar.bz2
     # ** this will create a directory called llvm **
 
 Continue to Step 2.

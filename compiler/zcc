@@ -1,10 +1,9 @@
 #!/bin/bash
 
 #VM arguments for java
-javaargs=-Xmx7000M
+javaargs=-Xmx14000M
 #Arguments for python environment
 pythonargs=
-
 verbose=1
 
 #When 0, adds "#include<stdinc.h>" to the top of every c file
@@ -12,6 +11,7 @@ nostdinc=1
 path=
 build=
 targetdir=.
+depsdir=${HOME}/pepper_deps
 bugginess=0.1
 windowsize=
 prefix=
@@ -41,6 +41,7 @@ do
 	-f)  path="$2"; shift;;
 	-b)  bugginess="$2"; shift;;
 	-d)  targetdir="$2"; shift;;
+	-D)  depsdir="$2"; shift;;
 	-w)  windowsize="$2"; shift;;
 	-t)  framework="$2"; shift;;
 	-prefix)  prefix="$2"; shift;;
@@ -73,6 +74,8 @@ do
     esac
     shift
 done 
+
+export PYTHONPATH=${depsdir}/lib/python/:${PYTHONPATH}
 
 if [ "$path" == "" ] || [ "$framework" == "" ]; then
 {

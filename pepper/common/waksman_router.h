@@ -16,6 +16,7 @@ typedef struct packet {
 
 typedef struct routing_switch {
   bool swap;
+  bool set;
 } switch_t;
 
-void do_route(data_t* input, data_t* intermediate, data_t* output, switch_t* switches, size_t width, size_t depth);
+void wak_route(data_t* input, data_t* intermediate, data_t* output, switch_t* switches, size_t width, size_t num_switches);

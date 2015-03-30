@@ -12,7 +12,9 @@ LIBDIR := lib
 GENSRCDIR := apps_sfdl_gen
 HWSRCDIR := apps_sfdl_hw
 
-LSDIR := ../libsnark
+LSDIR := $(shell pwd)/../libsnark
+DEPSDIR := $(HOME)/pepper_deps
+
 include flags
 
 TOP = .
@@ -92,15 +94,16 @@ CFLAGS += -DRAM_CELL_NUM_BITS=$(RAM_CELL_NUM_BITS)
 CFLAGS += -DFAST_RAM_WORD_WIDTH=$(FAST_RAM_WORD_WIDTH)
 CFLAGS += -DFAST_RAM_ADDRESS_WIDTH=$(FAST_RAM_ADDRESS_WIDTH)
 
+
 # Common linker flags
-LDFLAGS := -L/usr/local/lib -lm -lgmp -lgmpxx -lgomp -lconfig++ -lgmpmee -lntl -lrt -lfcgi -lpbc -lkyotocabinet
-LDFLAGS += -L/usr/local/lib/chacha -lchacha -lpapi -lleveldb
+LDFLAGS := -L$(DEPSDIR)/lib -lm -lgmp -lgmpxx -lgomp -lconfig++ -lgmpmee -lntl -lrt -lfcgi -lpbc -lkyotocabinet
+LDFLAGS += -L$(DEPSDIR)/lib -lchacha -lpapi -lleveldb
 
 ifeq ($(USE_LIBSNARK),1)
 LDFLAGS += -L $(LSDIR) -lsnark
 LDFLAGS += -L$(LSDIR)/depinst/lib -lzm
 else
-LDFLAGS += -L/usr/local/lib/libzm -lzm
+LDFLAGS += -L$(DEPSDIR)/lib/libzm -lzm
 endif
 
 ifeq ($(BUILD_MYSQL_MICRO), 1)
@@ -110,12 +113,12 @@ endif
 # LDFLAGS += -ldb_cxx
 
 # common include flags
-IFLAGS := -I/usr/include -I/usr/local/include -pthread
-IFLAGS += -I/usr/local/include/chacha
-IFLAGS += -I/usr/local/include/pbc
+IFLAGS := -I$(DEPSDIR)/include -I$(DEPSDIR)/include -pthread
+IFLAGS += -I$(DEPSDIR)/include/chacha
+IFLAGS += -I$(DEPSDIR)/include/pbc
 #IFLAGS += -I/usr/local/BerkeleyDB.6.0/include
 ifneq ($(USE_LIBSNARK),1)
-	IFLAGS += -I/usr/local/include/libzm
+	IFLAGS += -I$(DEPSDIR)/include/libzm
 endif
 
 ifeq ($(BUILD_MYSQL_MICRO), 1)
@@ -172,12 +175,9 @@ include lib_gpu/Makefrag
 include lib_gpu_tests/Makefrag
 include include/Makefrag
 endif
-ifneq ($(BUILD_CMT), 0)
-include cmtgkr/Makefrag
-endif
-ifneq ($(BUILD_MIP), 0)
-    include mip/Makefrag
-endif
+#ifneq ($(BUILD_CMT), 0)
+#include cmtgkr/Makefrag
+#endif
 include apps_sfdl/Makefrag
 
 APPS_TAILORED_BINS = $(patsubst apps_tailored/%.cpp, $(BINDIR)/%, $(EXEC_SRCFILES))
@@ -240,6 +240,7 @@ $(GENSRCDIR)/%_cons.cpp : apps_sfdl/%.sfdl
 	@cd ../compiler/; \
 	./zcc -f ../pepper/$< \
 		      -d ../pepper \
+			  -D $(DEPSDIR) \
 		      $(ZCC_CARGS) \
 		      -prefix $(patsubst apps_sfdl/%.sfdl,$(GENSRCDIR)/%,$<) \
 
@@ -262,6 +263,7 @@ $(GENSRCDIR)/%_v_inp_gen.cpp : apps_sfdl/%.c apps_sfdl/*.h ../compiler/cstdinc/*
 	@cd ../compiler/; \
 	./zcc -f ../pepper/$< \
 		      -d ../pepper \
+			  -D $(DEPSDIR) \
 		      $(ZCC_CARGS) \
 		      -prefix $(patsubst apps_sfdl/%.c,$(GENSRCDIR)/%,$<) \
 
