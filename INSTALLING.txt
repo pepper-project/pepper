@@ -4,24 +4,26 @@ Installing pepper dependencies
 = Tools
     Your distribution will likely have these as binary packages.
 
-    Tested with Debian (Wheezy and Jessie), Fedora 21, Arch 2015.03ish.
+    Tested with Debian (Wheezy and Jessie), CentOS 7, Fedora 21, Arch 2015.03ish.
 
 Debian:
 --
   Ubuntu should be largely similar if not identical.
 
-    apt-get install python2.7 libpython2.7 libpython2.7-dev openjdk-7-jdk \\
-            golang build-essential gcc g++ gcc-multilib g++-multilib ant  \\
-            ant-optional make time libboost-all-dev libgmp10 libgmp-dev   \\
+    apt-get install python2.7 libpython2.7 libpython2.7-dev openjdk-7-jdk \
+            golang build-essential gcc g++ gcc-multilib g++-multilib ant  \
+            ant-optional make time libboost-all-dev libgmp10 libgmp-dev   \
             zlib1g zlib1g-dev openmpi-bin openmpi-common libopenmpi-dev
 
 Fedora:
 --
   CentOS should be largely similar, assuming a sufficiently up-to-date release.
 
-    yum install python python-devel java-1.8.0-openjdk-devel golang gcc   \\
-        gcc-c++ glibc-devel.i686 libstdc++.i686 ant make time boost       \\
-        boost-devel gmp gmp-devel zlib zlib-devel openmpi openmpi-devel
+    yum groupinstall 'Development Tools'
+    yum install python python-devel java-1.8.0-openjdk-devel golang gcc   \
+        gcc-c++ glibc-devel libstdc++ glibc-devel.i686 libstdc++.i686 ant \
+        make time boost boost-devel gmp gmp-devel zlib zlib-devel openmpi \
+        openmpi-devel
 
   **IMPORTANT: on Fedora, you need to take a few more steps to use openmpi.
   You will need to set up your environment this way every time you want
@@ -34,15 +36,14 @@ Arch:
 --
   First, you need to enable multilib. See https://wiki.archlinux.org/index.php/multilib
 
-    pacman -S python2 jdk7-openjdk go base-devel multilib-devel           \\
-           libstdc++5 lib32-glibc lib32-libstdc++5 lib32-gcc-libs         \\
-           gcc-libs-multilib libtool-multilib gcc-multilib apache-ant     \\
+    pacman -S python2 jdk7-openjdk go base-devel multilib-devel           \
+           libstdc++5 lib32-glibc lib32-libstdc++5 lib32-gcc-libs         \
+           gcc-libs-multilib libtool-multilib gcc-multilib apache-ant     \
            make time boost boost-libs gmp zlib openmpi
     ln -sf /usr/bin/python2 /usr/bin/python
     ln -sf /usr/bin/python2-config /usr/bin/python-config
 
   Note that this will change `python` from python3 (Arch default) to python2. Sorry...
-
 
 Other distributions:
 --
@@ -87,8 +88,9 @@ For more details, see the end of this file.
           Arch: pacman -S go
 
     4.  gcc, g++ >= 4.7.3 (including multilib support)
-          Debian: apt-get install gcc g++ gcc-multilib g++-multilib
-          Fedora: yum install gcc gcc-c++ glibc-devel.i686 libstdc++.i686
+          Debian: apt-get install build-essential gcc g++ gcc-multilib g++-multilib
+          Fedora: yum groupinstall 'Development Tools'
+                  yum install gcc gcc-c++ glibc-devel libstdc++ glibc-devel.i686 libstdc++.i686
           Arch: pacman -S base-devel multilib-devel libstdc++5 lib32-glibc lib32-libstdc++5 lib32-gcc-libs gcc-libs-multilib libtool-multilib gcc-multilib
 
     5.  Apache ant
