@@ -9,12 +9,12 @@ I. Installation and first steps
   to pull in the submodules this project relies on.
   
   2. This codebase depends on several external libraries. Please
-  see the INSTALLING.txt file for more information on setting up
+  see the INSTALLING.md file for more information on setting up
   dependencies.
 
-  3. If you haven't already done so, see compiler/buffetfsm/README.md
-  for instructions on building the patched Clang/LLVM libraries we
-  need for the buffet::fsm C-to-C compiler.
+  3. See compiler/buffetfsm/README.md for instructions on building
+  the patched Clang/LLVM libraries we need for Buffet's C-to-C
+  compiler.
 
   4. We recommend using the libsnark backend. If you've pulled in the
   submodules (Step 1, above), you've already got a local copy. Finish
