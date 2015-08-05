@@ -245,16 +245,13 @@ void convert_to_z(mpz_t z, const mpq_t q, const mpz_t prime) {
   assert(mpz_sgn(prime) != 0);
   if (mpz_cmp_ui(mpq_denref(q), 1) == 0) {
     mpz_set(z, mpq_numref(q));
-    if (mpq_sgn(q) < 0) {
-      mpz_mod(z, z, prime);
-    }
   } else if (mpz_cmp_ui(mpq_denref(q), 0) == 0) {
     mpz_set_ui(z, 0);
   } else {
     mpz_invert(z, mpq_denref(q), prime);
     mpz_mul(z, z, mpq_numref(q));
-    mpz_mod(z, z, prime);
   }
+  mpz_mod(z, z, prime);
 }
 
 off_t get_file_size(const char *filename) {
