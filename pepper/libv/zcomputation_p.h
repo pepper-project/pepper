@@ -7,14 +7,13 @@
 
 
 #ifdef USE_LIBSNARK
-#include "r1cs/r1cs.hpp"
-#include "common/types.hpp"
-#include "r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+#include "relations/constraint_satisfaction_problems/r1cs/r1cs.hpp"
+#include "common/default_types/ec_pp.hpp"
+#include "zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
 #include "algebra/curves/public_params.hpp"
-#include "encoding/knowledge_commitment.hpp"
+#include "algebra/curves/bn128/bn128_pp.hpp"
+#include "algebra/curves/public_params.hpp"
 #include "algebra/fields/fp.hpp"
-static Measurement m_queries, m_proofv;
-static void starttimers();
 #endif
 
 

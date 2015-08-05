@@ -1171,7 +1171,7 @@ void ZComputationProver::prover_noninteractive() {
     cout << "p_peak_mem_before_ls_prover " << getPeakRSS() << endl;
     //    start_profiling();
     typedef Fr<bn128_pp> FieldT;
-    init_public_params<bn128_pp>();    
+    bn128_pp::init_public_params();
     string filename = FOLDER_STATE;
     filename += "/libsnark_pk";
     //cout << "FILENAME: " << filename << endl;;
@@ -1187,7 +1187,9 @@ void ZComputationProver::prover_noninteractive() {
     m_key.end();
     cout << "m_load_key: " << m_key.get_papi_elapsed_time() << endl;
 
-    r1cs_variable_assignment<Fr<bn128_pp> > va;
+    r1cs_ppzksnark_primary_input<bn128_pp> primary_input;
+    r1cs_ppzksnark_auxiliary_input<bn128_pp> aux_input;
+
 
     ifstream inputs("./bin/inputs");
     ifstream outputs("./bin/outputs");
@@ -1205,8 +1207,9 @@ void ZComputationProver::prover_noninteractive() {
     // std::cout << "NUMBER OF INPUTS: " << numInputs << std::endl;
     for (int j = 1; j <= numInputs; j++)
     {
-        FieldT currentVar = FieldT::getTextVar(inputs);
-        va.push_back(currentVar);
+        FieldT currentVar;
+        inputs >> currentVar;
+        primary_input.push_back(currentVar);
         inputs >> c;
     }
 
@@ -1215,8 +1218,9 @@ void ZComputationProver::prover_noninteractive() {
     // std::cout << "NUMBER OF OUTPUTS: " << num_outputs << std::endl;
     for (int i = 1; i <= num_outputs; i++)
     {
-        FieldT currentVar = FieldT::getTextVar(outputs);
-        va.push_back(currentVar);
+        FieldT currentVar;
+        outputs >> currentVar;
+        primary_input.push_back(currentVar);
         outputs >> c;
     }
 
@@ -1225,35 +1229,25 @@ void ZComputationProver::prover_noninteractive() {
     // std::cout << "NUMBER OF VARIABLES: " << num_intermediate_vars << std::endl;
     for (int i = 1; i <= num_intermediate_vars; i++)
     {
-      FieldT currentVar = FieldT::getTextVar(variables);
-      va.push_back(currentVar);
-      variables >> c;
+        FieldT currentVar;
+        variables >> currentVar;
+        aux_input.push_back(currentVar);
+        variables >> c;
     }
 
     inputs.close();
     outputs.close();
     variables.close();
-
-    int num_vars = num_intermediate_vars + num_outputs + numInputs + 1;
-
-    FieldT fin = FieldT::zero();
-    for (int i = 1; i < num_vars; ++i)
-    {
-       fin = fin + va[i-1];
-    }
    
-    va.push_back(fin.squared());
     m_key.end();
     cout << "p_load_vars " << m_key.get_papi_elapsed_time() << endl;
 
     m_key.begin_with_init();
-    m_queries.begin_with_init();
-    r1cs_ppzksnark_proof<bn128_pp> proof = r1cs_ppzksnark_prover<bn128_pp>(keypair.pk, va, ::starttimers);
-    m_proofv.end();
+
+    r1cs_ppzksnark_proof<bn128_pp> proof = r1cs_ppzksnark_prover<bn128_pp>(keypair.pk, primary_input, aux_input);
+
     m_key.end();
     cout << "p_compute_proof " << m_key.get_papi_elapsed_time() << endl;
-    cout << "p_compute_abchk " << m_queries.get_papi_elapsed_time() << endl;
-    cout << "p_compute_proofv " << m_proofv.get_papi_elapsed_time() << endl;
     filename = FOLDER_STATE;
     filename += "/libsnark_proof";
 
@@ -1545,11 +1539,3 @@ void ZComputationProver::build_poly_tree(int level, int j, int index) {
     mul(poly_tree[index], poly_tree[2*index+1], poly_tree[2*index+2]);
   }
 }
-
-#ifdef USE_LIBSNARK
-void starttimers(void)
-{
-  m_queries.end();
-  m_proofv.begin_with_init();
-}
-#endif

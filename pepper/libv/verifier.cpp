@@ -516,9 +516,10 @@ void Verifier::begin_pepper() {
 
    for (int j = 1; j <= numInputs; j++)
    {
-     FieldT currentVar = FieldT::getTextVar(inputs);        
-     inputvec.push_back(currentVar);
-     inputs >> c;
+       FieldT currentVar;
+       inputs >> currentVar;
+       inputvec.push_back(currentVar);
+       inputs >> c;
    }
    inputs.close();   
 
@@ -530,9 +531,10 @@ void Verifier::begin_pepper() {
 
    for (int j = 1; j <= numOutputs; j++)
    {
-     FieldT currentVar = FieldT::getTextVar(outputs);        
-     inputvec.push_back(currentVar);
-     outputs >> c;
+       FieldT currentVar;
+       outputs >> currentVar;
+       inputvec.push_back(currentVar);
+       outputs >> c;
    }
    outputs.close();   
   
@@ -541,7 +543,7 @@ void Verifier::begin_pepper() {
    cout <<"v_load_proof " << m_runtests.get_papi_elapsed_time() << endl;
 
    m_runtests.begin_with_init();
-
+   num_verification_runs = 1; //otherwise libsnark prints a bunch of output
    for (int i = 0; i < num_verification_runs; i++)
      ans = ans & r1cs_ppzksnark_online_verifier_strong_IC<bn128_pp>(pvk, inputvec, proof);
 

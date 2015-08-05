@@ -21,7 +21,7 @@ I. Installation and first steps
   preparing it as follows:
     cd libsnark
     ./prepare-depends.sh
-    make lib STATIC=1
+    make lib STATIC=1 NO_PROCPS=1
   and make sure that USE_LIBSNARK=1 is set in the pepper/flags file.
 
   5. Now that everything is set up, you're ready to run some verified
@@ -54,11 +54,12 @@ II. Configuration
 
 III. What is new in this version?
 
-  (1) Switched memory routing network from Benes to Waksman
-      - this should give better performance, especially for
-        programs with non-power-of-two memory accesses
+  (1) Updated code which interfaces with libsnark. Our fork of
+      libsnark is now identical to the latest available version from
+      https://github.com/scipr-lab/libsnark, except for a
+      configuration option set in the Makefile.
 
-  (2) Updated installation instructions for prerequisites.
+  (2) Minor bugfix.
 
 IV. Contact
 Please contact

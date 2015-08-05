@@ -2,9 +2,12 @@
 #include <common/memory.h> 
 
 #ifdef USE_LIBSNARK
-#include "r1cs/r1cs.hpp"
-#include "common/types.hpp"
-#include "r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+#include "relations/constraint_satisfaction_problems/r1cs/r1cs.hpp"
+#include "common/default_types/ec_pp.hpp"
+#include "zk_proof_systems/ppzksnark/r1cs_ppzksnark/r1cs_ppzksnark.hpp"
+#include "algebra/curves/public_params.hpp"
+#include "algebra/curves/bn128/bn128_pp.hpp"
+#include "common/profiling.hpp"
 using namespace libsnark;
 #endif
 
@@ -702,9 +705,9 @@ mpz_t t, D;
 #ifdef USE_LIBSNARK
 void ZComputationVerifier::generate_libsnark_keys()
 {
-  //start_profiling();
+  start_profiling();
   typedef Fr<bn128_pp> FieldT;
-  init_public_params<bn128_pp>();
+  bn128_pp::init_public_params();
   r1cs_constraint_system<FieldT> q;
 
   int cn_len = qap_fn.length()-8;
@@ -765,9 +768,9 @@ void ZComputationVerifier::generate_libsnark_keys()
   num_inputs = size_input;
   num_outputs = size_output;
   num_inputs_outputs = num_inputs + num_outputs;
-  q.num_inputs = num_inputs_outputs;
-  q.num_vars = num_intermediate_vars + num_inputs_outputs + 1;
-    
+  q.primary_input_size = num_inputs_outputs;
+  q.auxiliary_input_size = num_intermediate_vars;
+
   for (int currentconstraint = 1; currentconstraint <= numConstraints; currentconstraint++)
   {
         linear_combination<FieldT> A, B, C;
@@ -847,16 +850,6 @@ void ZComputationVerifier::generate_libsnark_keys()
     Bmat.close();
     Cmat.close();
       
-    linear_combination<FieldT> A, B, C;
-
-    for (size_t i = 1; i < q.num_vars; ++i)
-    {
-        A.add_term(i, 1);
-        B.add_term(i, 1);
-    }
-
-    C.add_term(q.num_vars, 1);
-    q.add_constraint(r1cs_constraint<FieldT>(A, B, C));
     //cout<< "size of q" << q.constraints.size()<< std::endl;
     Measurement m_key;
 

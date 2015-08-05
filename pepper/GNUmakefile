@@ -48,10 +48,10 @@ CHECKER := $(PYTHON) cpplint.py --verbose 5
 
 # Compiler flags
 CFLAGS := $(CFLAGS) -I$(TOP) -I$(TOP)/include -MD -m64 
-CFLAGS += -std=c++0x  -Wall -Wno-format -Wno-unused -fopenmp -O2 
+CFLAGS += -std=c++0x  -Wall -Wno-format -Wno-unused -Wno-literal-suffix -fopenmp -O2
 
 ifeq ($(USE_LIBSNARK),1)
-CFLAGS += -DCURVE_BN128 -I$(LSDIR)/src -I$(LSDIR)/depsrc/ate-pairing/include -DBN_SUPPORT_SNARK -DBINARY_OUTPUT -DUSE_LIBSNARK
+CFLAGS += -DCURVE_BN128 -I$(LSDIR)/src -I$(LSDIR)/depsrc/ate-pairing/include -DBN_SUPPORT_SNARK  -DUSE_LIBSNARK
 endif
 
 # temporary directory
