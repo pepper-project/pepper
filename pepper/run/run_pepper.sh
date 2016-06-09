@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -beE -o pipefail
+
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 [program_name]" >&2
   exit 1

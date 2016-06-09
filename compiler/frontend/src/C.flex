@@ -166,7 +166,7 @@ Comment = {TraditionalComment} | {EndOfLineComment}
   0{D}+{IS}?    { return token(OCTAL_CONSTANT); }
   {D}+{IS}?    { return token(DECIMAL_CONSTANT); }
   
-  //???
+  //Character constants
   L?'(\\.|[^\\'])+'  { return token(CONSTANT); }
   
   //Floating point constants. 

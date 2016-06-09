@@ -1815,6 +1815,14 @@ public class CCompiler {
 			// strValue is wrapped in quotes
 			strValue = strValue.substring(1, strValue.length() - 1);
 
+                        if (strValue.contains("\\")){
+                                System.out.println(
+                                        "WARNING: Backslash in string literal"
+                                        + " not treated as escape character but as"
+                                        + " real backslash: " + strValue
+                                );
+                        }
+
 			int N = strValue.length() + 1; // +1 for C null-terminated string
 			LvalExpression[] list = new LvalExpression[N];
 			Type charType = typetable.get("char");
@@ -1895,6 +1903,31 @@ public class CCompiler {
 				throw new RuntimeException("Integer too large to represent: "
 						+ val);
 			}
+			return toRet;
+		} else if (e.constType.equals("char")) {
+			// strValue is wrapped in single quotes
+                        if (val.length() != 3){
+				throw new RuntimeException("Char constants must"
+                                + " be a single character long, escape sequences"
+                                + " not supported: "
+				+ val);
+                        }
+
+                        Integer charValue = (int) val.charAt(1);
+
+                        IntConstant toRet = IntConstant.valueOf(charValue);
+
+			Type charType = typetable.get("char");
+
+                        if (TypeHeirarchy.isSubType(toRet.getType(), charType)){
+                                toRet.metaType = charType;
+                        } else {
+                                throw new RuntimeException(
+                                "Assertion error: "
+                                + "Char constant too large?" + val
+                                );
+                        }
+
 			return toRet;
 		} else {
 			throw new RuntimeException(

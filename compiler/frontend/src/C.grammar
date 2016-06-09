@@ -134,7 +134,7 @@ AMPERSAND,PIPE,ASTERISK,CARET,ADD_OP,MINUS_OP,NOT_OP,NEG_OP,DIV_OP,MOD_OP,QUESTI
 
 primary_expression
   = IDENTIFIER.a {: return new Symbol(new Identifier(a)); :}
-  | CONSTANT.a {: return new Symbol(new Constant(a,"???")); :}
+  | CONSTANT.a {: return new Symbol(new Constant(a,"char")); :}
   | HEX_CONSTANT.a {: return new Symbol(new Constant(a,int_hex)); :}
   | OCTAL_CONSTANT.a {: return new Symbol(new Constant(a,int_octal)); :}
   | DECIMAL_CONSTANT.a {: return new Symbol(new Constant(a,int_decimal)); :}
