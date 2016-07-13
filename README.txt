@@ -1,3 +1,10 @@
+NOTE: A simplified version of this codebase is available at
+https://github.com/pepper-project/pequin
+
+Development is ongoing to improve the usability and documentation of
+both releases, but new users may find it easier to start with the
+version above.
+
 This source code is released under a BSD-style license. See LICENSE
 for more details.
 
@@ -63,7 +70,5 @@ III. What is new in this version?
 
 IV. Contact
 Please contact
-    srinath at cs dot utexas dot edu
-or
-    rsw at cs dot nyu dot edu
+       pepper@nyu.systems
 for any questions and comments.
