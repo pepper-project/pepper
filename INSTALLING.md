@@ -24,7 +24,8 @@ Note: Ubuntu should be largely similar if not identical.
     apt-get install python2.7 libpython2.7 libpython2.7-dev openjdk-7-jdk \
             golang build-essential gcc g++ gcc-multilib g++-multilib ant  \
             ant-optional make time libboost-all-dev libgmp10 libgmp-dev   \
-            zlib1g zlib1g-dev openmpi-bin openmpi-common libopenmpi-dev
+            zlib1g zlib1g-dev openmpi-bin openmpi-common libopenmpi-dev   \
+            libssl-dev
 
 ### Fedora
 
@@ -35,7 +36,7 @@ We have tested this with CentOS 7.
     yum install python python-devel java-1.8.0-openjdk-devel golang gcc   \
         gcc-c++ glibc-devel libstdc++ glibc-devel.i686 libstdc++.i686 ant \
         make time boost boost-devel gmp gmp-devel zlib zlib-devel openmpi \
-        openmpi-devel
+        openmpi-devel openssl-devel
 
 **IMPORTANT**: on Fedora, you need to take a few more steps to use openmpi.
 You will need to set up your environment this way every time you want
