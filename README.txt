@@ -70,5 +70,5 @@ III. What is new in this version?
 
 IV. Contact
 Please contact
-       pepper@nyu.systems
+       pepper@pepper-project.org
 for any questions and comments.
