@@ -74,6 +74,7 @@ class ComputationProver : public Prover {
 
     void compute_genericget(FILE* pws_file);
     void compute_printf(FILE* pws_file);
+    bool is_congruent(mpq_t a, mpq_t b);
 
   public:
     ComputationProver(int ph, int b_size, int num_r, int size_input, const char *name_prover);
