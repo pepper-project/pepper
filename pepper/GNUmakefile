@@ -232,6 +232,8 @@ $(GENSRCDIR)/%_v.h \
 $(GENSRCDIR)/%_v.cpp \
 $(GENSRCDIR)/%_p.h \
 $(GENSRCDIR)/%_p.cpp \
+$(GENSRCDIR)/%_v_inp_gen.h \
+$(GENSRCDIR)/%_v_inp_gen.cpp \
 $(GENSRCDIR)/%_cons.h \
 $(GENSRCDIR)/%_cons.cpp : apps_sfdl/%.sfdl
 	@echo + compile $< $(ZCC_CARGS)
